@@ -328,10 +328,27 @@ const stockList = [
   { symbol: 'BA', name: 'Boeing', domain: 'boeing.com' }
 ];
 
+async function fetchStockWithRetry(symbol, retries = 2) {
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const res = await fetch(`https://finnhub.io/api/v1/quote?symbol=${symbol}&token=${FINNHUB_API_KEY}`);
+      if (res.status === 429) {
+        await new Promise(r => setTimeout(r, 2000 * (attempt + 1)));
+        continue;
+      }
+      if (!res.ok) return null;
+      return await res.json();
+    } catch (err) {
+      await new Promise(r => setTimeout(r, 1000));
+    }
+  }
+  return null;
+}
+
 async function loadStocks() {
   const tbody = document.getElementById('market-body');
   const highlightRow = document.getElementById('highlight-row');
-  tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color:#848e9c;">Loading...</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color:#848e9c;">Loading... (এতে কিছুটা সময় লাগতে পারে)</td></tr>';
   highlightRow.innerHTML = '';
 
   if (!FINNHUB_API_KEY || FINNHUB_API_KEY === 'YOUR_FINNHUB_API_KEY_HERE') {
@@ -339,55 +356,52 @@ async function loadStocks() {
     return;
   }
 
-  try {
-    const results = await Promise.all(stockList.map(async s => {
-      const res = await fetch(`https://finnhub.io/api/v1/quote?symbol=${s.symbol}&token=${FINNHUB_API_KEY}`);
-      if (!res.ok) throw new Error('HTTP ' + res.status);
-      const q = await res.json();
-      return { ...s, ...q };
-    }));
+  tbody.innerHTML = '';
+  let shown = 0;
 
-    tbody.innerHTML = '';
-    highlightRow.innerHTML = '';
-
-    results.forEach((s, idx) => {
-      if (s.c === undefined || s.c === 0) return;
-      const price = s.c;
-      const changePercent = s.dp ?? 0;
-      const up = changePercent >= 0;
-      const logoUrl = `https://logo.clearbit.com/${s.domain}`;
-
-      if (idx < 3) {
-        const hCard = document.createElement('div');
-        hCard.className = 'highlight-card';
-        hCard.innerHTML = `<div class="name">${s.symbol}</div><div class="price ${up?'change-up':'change-down'}">$${price.toFixed(2)}</div>`;
-        highlightRow.appendChild(hCard);
-      }
-
-      const row = document.createElement('tr');
-      row.innerHTML = `
-        <td>
-          <div class="coin-name">
-            <img src="${logoUrl}" onerror="this.style.visibility='hidden'">
-            <div>${s.symbol}<div class="coin-sub">${s.name}</div></div>
-          </div>
-        </td>
-        <td><canvas width="70" height="30" id="chart-stock-${s.symbol}"></canvas></td>
-        <td>
-          <div class="${up?'change-up':'change-down'}">${up?'+':''}${changePercent.toFixed(2)}%</div>
-          <div>$${price.toFixed(2)}</div>
-        </td>`;
-      tbody.appendChild(row);
-
-      const canvas = document.getElementById('chart-stock-' + s.symbol);
-      if (canvas) drawSparkline(canvas, [s.pc, s.l, s.o, s.h, s.c], up);
-    });
-
-    if (tbody.innerHTML === '') {
-      tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color:#f6465d;">Could not load stock data.</td></tr>';
+  for (const s of stockList) {
+    const q = await fetchStockWithRetry(s.symbol);
+    if (!q || q.c === undefined || q.c === 0) {
+      await new Promise(r => setTimeout(r, 400));
+      continue;
     }
-  } catch (err) {
-    tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color:#f6465d;">Error: ' + err.message + '</td></tr>';
+
+    const price = q.c;
+    const changePercent = q.dp ?? 0;
+    const up = changePercent >= 0;
+    const logoUrl = `https://logo.clearbit.com/${s.domain}`;
+
+    if (shown < 3) {
+      const hCard = document.createElement('div');
+      hCard.className = 'highlight-card';
+      hCard.innerHTML = `<div class="name">${s.symbol}</div><div class="price ${up?'change-up':'change-down'}">$${price.toFixed(2)}</div>`;
+      highlightRow.appendChild(hCard);
+    }
+    shown++;
+
+    const row = document.createElement('tr');
+    row.innerHTML = `
+      <td>
+        <div class="coin-name">
+          <img src="${logoUrl}" onerror="this.style.visibility='hidden'">
+          <div>${s.symbol}<div class="coin-sub">${s.name}</div></div>
+        </div>
+      </td>
+      <td><canvas width="70" height="30" id="chart-stock-${s.symbol}"></canvas></td>
+      <td>
+        <div class="${up?'change-up':'change-down'}">${up?'+':''}${changePercent.toFixed(2)}%</div>
+        <div>$${price.toFixed(2)}</div>
+      </td>`;
+    tbody.appendChild(row);
+
+    const canvas = document.getElementById('chart-stock-' + s.symbol);
+    if (canvas) drawSparkline(canvas, [q.pc, q.l, q.o, q.h, q.c], up);
+
+    await new Promise(r => setTimeout(r, 400));
+  }
+
+  if (tbody.innerHTML === '') {
+    tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color:#f6465d;">Could not load stock data. কিছুক্ষণ পর আবার চেষ্টা করুন।</td></tr>';
   }
 }
 
