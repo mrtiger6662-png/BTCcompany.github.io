@@ -36,17 +36,6 @@
   }
   .demo-banner span { display:block; font-weight:normal; font-size:11px; color:#c9a13a; margin-top:2px; }
 
-  .balance-row {
-    display:flex; align-items:center; justify-content:space-between;
-    background:#161a1e; border-radius:8px; padding:10px 14px; margin-bottom:12px;
-  }
-  .balance-row .label { color:#848e9c; font-size:12px; }
-  .balance-row .value { font-weight:bold; font-size:16px; color:#f0b90b; }
-  .reset-btn {
-    background:transparent; border:1px solid #474d57; color:#848e9c;
-    padding:5px 10px; border-radius:6px; font-size:11px; cursor:pointer;
-  }
-
   .chart-header { display:flex; align-items:center; gap:10px; margin-bottom:8px; }
   .chart-header img { width:26px; height:26px; border-radius:50%; }
   .chart-header .pair-name { font-weight:bold; font-size:18px; }
@@ -133,14 +122,6 @@
 <div id="coin-list-view"></div>
 
 <div id="chart-view">
-
-  <div class="balance-row">
-    <div>
-      <div class="label">Demo Balance (Virtual)</div>
-      <div class="value" id="balance-display">$0.00</div>
-    </div>
-    <button class="reset-btn" id="reset-balance-btn">Reset Balance</button>
-  </div>
 
   <div class="chart-header">
     <img id="chart-icon" src="" alt="">
@@ -242,7 +223,7 @@ const durationList = [
 
 let selectedDuration = null;
 
-// ---------- Demo balance (virtual, stored locally in this browser only) ----------
+// ---------- Demo balance (virtual, stored locally in this browser only, no UI box) ----------
 const BALANCE_KEY = 'demoBalance_v1';
 function getBalance() {
   const v = localStorage.getItem(BALANCE_KEY);
@@ -253,12 +234,11 @@ function setBalance(val) {
   renderBalance();
 }
 function renderBalance() {
-  document.getElementById('balance-display').textContent =
-    '$' + getBalance().toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' (Virtual)';
+  const el = document.getElementById('balance-display');
+  if (el) {
+    el.textContent = '$' + getBalance().toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' (Virtual)';
+  }
 }
-document.getElementById('reset-balance-btn').addEventListener('click', () => {
-  setBalance(10000);
-});
 
 // ---------- Duration boxes ----------
 function renderDurationBoxes() {
