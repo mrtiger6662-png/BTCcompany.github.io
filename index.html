@@ -235,17 +235,8 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 
 firebase.auth().onAuthStateChanged(user => {
-  const navRight = document.getElementById('nav-right');
   if (user) {
-    navRight.innerHTML = `
-      <a href="market.html" style="text-decoration:none;"><button class="btn-outline">Market</button></a>
-      <button class="btn-gold" onclick="firebase.auth().signOut().then(()=>location.reload())">Log Out</button>
-    `;
-  } else {
-    navRight.innerHTML = `
-      <a href="login.html" style="text-decoration:none;"><button class="btn-outline">Log In</button></a>
-      <a href="signup.html" style="text-decoration:none;"><button class="btn-gold">Sign Up</button></a>
-    `;
+    window.location.href = 'market.html';
   }
 });
 </script>
