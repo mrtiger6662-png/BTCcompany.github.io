@@ -18,6 +18,18 @@
     width:calc(100% - 32px); margin:16px; padding:14px; border:none; border-radius:8px;
     background:#f6465d; color:white; font-weight:bold; cursor:pointer;
   }
+  .icon-boxes {
+    display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px;
+    margin:16px;
+  }
+  .icon-box {
+    background:#161a1e; border-radius:12px; height:100px;
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer;
+  }
+  .icon-box img {
+    max-width:70%; max-height:70%; object-fit:contain;
+  }
   .bottom-nav {
     position:fixed; bottom:0; left:0; right:0; background:#161a1e;
     display:flex; justify-content:space-around; padding:10px 0;
@@ -36,14 +48,17 @@
 </style>
 </head>
 <body>
-
 <header><h1>Profile</h1></header>
-
 <div class="card" id="profile-card">
   <div class="row"><span class="label">Loading...</span></div>
 </div>
-
 <button class="logout-btn" onclick="firebase.auth().signOut().then(()=>window.location.href='index.html')">Log Out</button>
+
+<div class="icon-boxes">
+  <div class="icon-box" id="icon-box-1"><img src="" alt="" style="display:none;"></div>
+  <div class="icon-box" id="icon-box-2"><img src="" alt="" style="display:none;"></div>
+  <div class="icon-box" id="icon-box-3"><img src="" alt="" style="display:none;"></div>
+</div>
 
 <div class="bottom-nav">
   <a href="market.html" style="text-decoration:none;"><div><div class="ic">&#128200;</div>Market</div></a>
@@ -51,7 +66,6 @@
   <div><div class="ic">&#128188;</div>Assets</div>
   <div class="active"><div class="ic">&#128100;</div>Profile</div>
 </div>
-
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
@@ -65,7 +79,6 @@ const firebaseConfig = {
   appId: "1:1026212780106:web:985ec1bc35837d6320eeb3"
 };
 firebase.initializeApp(firebaseConfig);
-
 firebase.auth().onAuthStateChanged(async user => {
   if (!user) {
     window.location.href = 'login.html';
@@ -82,7 +95,6 @@ firebase.auth().onAuthStateChanged(async user => {
       if (data.createdAt) createdAtStr = data.createdAt.toDate().toLocaleString();
     }
   } catch (e) {}
-
   card.innerHTML = `
     <div class="row"><span class="label">Email/Phone</span><span class="value">${identifier}</span></div>
     <div class="row"><span class="label">UID</span><span class="value">${user.uid}</span></div>
