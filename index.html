@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ABC Company</title>
-
     <style>
         body {
             margin: 0;
@@ -12,40 +11,33 @@
             background: #f5f5f5;
             color: #222;
         }
-
         header {
             background: #111;
             color: white;
             padding: 20px;
             text-align: center;
         }
-
         nav {
             background: #333;
             text-align: center;
             padding: 12px;
         }
-
         nav a {
             color: white;
             text-decoration: none;
             margin: 0 15px;
         }
-
         .hero {
             text-align: center;
             padding: 80px 20px;
             background: white;
         }
-
         .hero h1 {
             font-size: 45px;
         }
-
         .hero p {
             font-size: 20px;
         }
-
         .button {
             display: inline-block;
             padding: 12px 25px;
@@ -54,42 +46,47 @@
             text-decoration: none;
             border-radius: 5px;
         }
-
         section {
             padding: 50px 20px;
             max-width: 1000px;
             margin: auto;
         }
-
         footer {
             background: #111;
             color: white;
             text-align: center;
             padding: 20px;
         }
+        .crypto-card {
+          display:flex; align-items:center; justify-content:space-between;
+          background:#fff; border-radius:10px; padding:14px 18px;
+          box-shadow:0 1px 4px rgba(0,0,0,0.15);
+        }
+        .crypto-left{display:flex; align-items:center; gap:12px;}
+        .crypto-left img{width:32px; height:32px;}
+        .crypto-name{font-weight:bold;}
+        .crypto-symbol{color:#777; font-size:13px; text-transform:uppercase;}
+        .crypto-right{text-align:right;}
+        .crypto-price{font-weight:bold; font-size:16px;}
+        .crypto-change-up{color:green; font-size:13px;}
+        .crypto-change-down{color:red; font-size:13px;}
     </style>
 </head>
-
 <body>
-
 <header>
     <h1>ABC Company</h1>
 </header>
-
 <nav>
     <a href="#home">Home</a>
     <a href="#about">About</a>
     <a href="#services">Services</a>
     <a href="#contact">Contact</a>
 </nav>
-
 <section class="hero" id="home">
     <h1>Welcome to ABC Company</h1>
     <p>Quality products and professional services</p>
-
     <a href="#contact" class="button">Contact Us</a>
 </section>
-
 <section id="about">
     <h2>About Us</h2>
     <p>
@@ -97,31 +94,83 @@
         and reliable services to our customers.
     </p>
 </section>
-
 <section id="services">
     <h2>Our Services</h2>
-
     <h3>Service 1</h3>
     <p>Description of your first service.</p>
-
     <h3>Service 2</h3>
     <p>Description of your second service.</p>
-
     <h3>Service 3</h3>
     <p>Description of your third service.</p>
 </section>
-
 <section id="contact">
     <h2>Contact Us</h2>
-
     <p>Phone: +1 000 000 0000</p>
     <p>Email: example@email.com</p>
     <p>Address: Your Business Address</p>
 </section>
 
+<section id="crypto-section" style="padding: 40px 20px; background:#e8e8e8;">
+  <h2 style="text-align:center; margin-bottom: 24px;">Top 10 Cryptocurrencies</h2>
+  <div id="crypto-list" style="display:flex; flex-direction:column; gap:12px; max-width:800px; margin:0 auto;">
+    <p style="text-align:center;">Loading live prices...</p>
+  </div>
+</section>
+
 <footer>
     <p>© 2026 ABC Company. All rights reserved.</p>
 </footer>
+
+<script>
+async function loadCrypto() {
+  try {
+    const res = await fetch('https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=10&page=1&sparkline=true');
+    const coins = await res.json();
+    const container = document.getElementById('crypto-list');
+    container.innerHTML = '';
+
+    coins.forEach(coin => {
+      const changeUp = coin.price_change_percentage_24h >= 0;
+      const changeClass = changeUp ? 'crypto-change-up' : 'crypto-change-down';
+      const changeSign = changeUp ? '+' : '';
+
+      const sparkPoints = coin.sparkline_in_7d.price;
+      const svgWidth = 100, svgHeight = 30;
+      const min = Math.min(...sparkPoints);
+      const max = Math.max(...sparkPoints);
+      const pointsAttr = sparkPoints.map((p, i) => {
+        const x = (i / (sparkPoints.length - 1)) * svgWidth;
+        const y = svgHeight - ((p - min) / (max - min || 1)) * svgHeight;
+        return x.toFixed(1) + ',' + y.toFixed(1);
+      }).join(' ');
+      const lineColor = changeUp ? '#1a9e50' : '#d9302f';
+
+      const card = document.createElement('div');
+      card.className = 'crypto-card';
+      card.innerHTML = `
+        <div class="crypto-left">
+          <img src="${coin.image}" alt="${coin.name}">
+          <div>
+            <div class="crypto-name">${coin.name}</div>
+            <div class="crypto-symbol">${coin.symbol}</div>
+          </div>
+        </div>
+        <svg width="${svgWidth}" height="${svgHeight}" style="margin:0 10px;">
+          <polyline points="${pointsAttr}" fill="none" stroke="${lineColor}" stroke-width="2"/>
+        </svg>
+        <div class="crypto-right">
+          <div class="crypto-price">$${coin.current_price.toLocaleString()}</div>
+          <div class="${changeClass}">${changeSign}${coin.price_change_percentage_24h.toFixed(2)}%</div>
+        </div>`;
+      container.appendChild(card);
+    });
+  } catch (err) {
+    document.getElementById('crypto-list').innerHTML = '<p style="text-align:center;color:red;">Failed to load prices.</p>';
+  }
+}
+loadCrypto();
+setInterval(loadCrypto, 60000);
+</script>
 
 </body>
 </html>
