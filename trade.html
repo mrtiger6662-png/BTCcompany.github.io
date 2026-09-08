@@ -44,16 +44,6 @@
   canvas#volume { width:100%; height:60px; display:block; margin-top:4px; }
   .time-labels { display:flex; justify-content:space-between; font-size:11px; color:#848e9c; margin-top:4px; }
 
-  .duration-row { display:grid; grid-template-columns:repeat(5,1fr); gap:8px; margin-top:16px; }
-  .duration-box {
-    background:#1e2329; border:1px solid #2b3139; border-radius:8px;
-    padding:12px 4px; text-align:center; cursor:pointer; transition:0.15s;
-  }
-  .duration-box:active { transform:scale(0.97); }
-  .duration-box.selected { border-color:#f0b90b; background:rgba(240,185,11,0.1); }
-  .duration-time { font-size:17px; font-weight:bold; color:#f0b90b; }
-  .duration-return { font-size:10px; color:#848e9c; margin-top:4px; line-height:1.3; }
-
   .bottom-nav {
     position:fixed; bottom:0; left:0; right:0; background:#161a1e;
     display:flex; justify-content:space-around; padding:10px 0;
@@ -107,8 +97,6 @@
     <canvas id="candles" width="700" height="260"></canvas>
     <canvas id="volume" width="700" height="60"></canvas>
     <div class="time-labels" id="time-labels"></div>
-
-    <div class="duration-row" id="duration-row"></div>
   </div>
 </div>
 
@@ -152,32 +140,6 @@ const coinList = [
   { symbol: 'MANAUSDT', name: 'Decentraland', short: 'MANA', icon: 'mana' },
   { symbol: 'HBARUSDT', name: 'Hedera', short: 'HBAR', icon: 'hbar' }
 ];
-
-const durationList = [
-  { seconds: 60, returnPct: 20.00 },
-  { seconds: 120, returnPct: 25.00 },
-  { seconds: 180, returnPct: 30.00 },
-  { seconds: 300, returnPct: 50.00 },
-  { seconds: 600, returnPct: 85.00 }
-];
-
-let selectedDuration = null;
-
-function renderDurationBoxes() {
-  const row = document.getElementById('duration-row');
-  row.innerHTML = '';
-  durationList.forEach(d => {
-    const box = document.createElement('div');
-    box.className = 'duration-box';
-    box.innerHTML = `<div class="duration-time">${d.seconds}s</div><div class="duration-return">${d.returnPct.toFixed(2)}% return</div>`;
-    box.addEventListener('click', () => {
-      document.querySelectorAll('.duration-box').forEach(b => b.classList.remove('selected'));
-      box.classList.add('selected');
-      selectedDuration = d;
-    });
-    row.appendChild(box);
-  });
-}
 
 const listView = document.getElementById('coin-list-view');
 const chartView = document.getElementById('chart-view');
@@ -237,7 +199,6 @@ function openChart(coin) {
   pageTitle.textContent = coin.short + '/USDT';
   document.getElementById('chart-icon').src = iconUrl(coin.icon);
   document.getElementById('chart-pair').textContent = coin.short + '/USDT';
-  renderDurationBoxes();
   loadChart();
   clearInterval(refreshTimer);
   refreshTimer = setInterval(loadChart, 15000);
