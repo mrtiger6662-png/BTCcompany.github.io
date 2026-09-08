@@ -216,61 +216,81 @@ async function loadForex() {
   const tbody = document.getElementById('market-body');
   const highlightRow = document.getElementById('highlight-row');
   tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color:#848e9c;">Loading...</td></tr>';
-  try {
-    const today = new Date();
-    const past = new Date();
-    past.setDate(past.getDate() - 9);
-    const fmt = d => d.toISOString().split('T')[0];
-    const start = fmt(past), end = fmt(today);
+  highlightRow.innerHTML = '';
 
-    const bases = [...new Set(forexList.map(f => f.base))];
-    const seriesByBase = {};
-    for (const base of bases) {
-      const targets = forexList.filter(f => f.base === base).map(f => f.quote).join(',');
-      const res = await fetch(`https://api.frankfurter.app/${start}..${end}?from=${base}&to=${targets}`);
-      const data = await res.json();
-      seriesByBase[base] = data.rates;
+  const dateStrs = [];
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    dateStrs.push(d.toISOString().split('T')[0]);
+  }
+
+  const bases = [...new Set(forexList.map(f => f.base))];
+  const seriesByBase = {};
+  let anySuccess = false;
+  let lastError = '';
+
+  await Promise.all(bases.map(async base => {
+    const symbols = forexList.filter(f => f.base === base).map(f => f.quote).join(',');
+    try {
+      const results = await Promise.all(dateStrs.map(async date => {
+        const res = await fetch(`https://api.frankfurter.dev/v1/${date}?base=${base}&symbols=${symbols}`);
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        return res.json();
+      }));
+      seriesByBase[base] = results.map(r => r.rates);
+      anySuccess = true;
+    } catch (err) {
+      lastError = err.message;
+      seriesByBase[base] = null;
+    }
+  }));
+
+  if (!anySuccess) {
+    tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color:#f6465d;">Could not load forex data (' + lastError + '). একটু পরে আবার চেষ্টা করুন।</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = '';
+
+  forexList.forEach((fx, idx) => {
+    const series = seriesByBase[fx.base];
+    if (!series) return;
+    const values = series.map(r => r[fx.quote]).filter(v => v !== undefined);
+    if (values.length === 0) return;
+    const latest = values[values.length - 1];
+    const prevDay = values.length > 1 ? values[values.length - 2] : latest;
+    const changePercent = ((latest - prevDay) / prevDay) * 100;
+    const up = changePercent >= 0;
+
+    if (idx < 3) {
+      const hCard = document.createElement('div');
+      hCard.className = 'highlight-card';
+      hCard.innerHTML = `<div class="name">${fx.flag} ${fx.pair}</div><div class="price ${up?'change-up':'change-down'}">${latest.toLocaleString(undefined,{maximumFractionDigits:4})}</div>`;
+      highlightRow.appendChild(hCard);
     }
 
-    tbody.innerHTML = '';
-    highlightRow.innerHTML = '';
+    const row = document.createElement('tr');
+    row.innerHTML = `
+      <td>
+        <div class="coin-name">
+          <span style="font-size:20px;">${fx.flag}</span>
+          <div>${fx.pair}<div class="coin-sub">${fx.base}/${fx.quote}</div></div>
+        </div>
+      </td>
+      <td><canvas width="70" height="30" id="chart-fx-${fx.pair.replace('/','')}"></canvas></td>
+      <td>
+        <div class="${up?'change-up':'change-down'}">${up?'+':''}${changePercent.toFixed(2)}%</div>
+        <div>${latest.toLocaleString(undefined,{maximumFractionDigits:4})}</div>
+      </td>`;
+    tbody.appendChild(row);
 
-    forexList.forEach((fx, idx) => {
-      const series = seriesByBase[fx.base];
-      const dates = Object.keys(series).sort();
-      const values = dates.map(d => series[d][fx.quote]);
-      const latest = values[values.length - 1];
-      const prevDay = values[values.length - 2] ?? latest;
-      const changePercent = ((latest - prevDay) / prevDay) * 100;
-      const up = changePercent >= 0;
+    const canvas = document.getElementById('chart-fx-' + fx.pair.replace('/',''));
+    if (canvas && values.length > 1) drawSparkline(canvas, values, up);
+  });
 
-      if (idx < 3) {
-        const hCard = document.createElement('div');
-        hCard.className = 'highlight-card';
-        hCard.innerHTML = `<div class="name">${fx.flag} ${fx.pair}</div><div class="price ${up?'change-up':'change-down'}">${latest.toLocaleString(undefined,{maximumFractionDigits:4})}</div>`;
-        highlightRow.appendChild(hCard);
-      }
-
-      const row = document.createElement('tr');
-      row.innerHTML = `
-        <td>
-          <div class="coin-name">
-            <span style="font-size:20px;">${fx.flag}</span>
-            <div>${fx.pair}<div class="coin-sub">${fx.base}/${fx.quote}</div></div>
-          </div>
-        </td>
-        <td><canvas width="70" height="30" id="chart-fx-${fx.pair.replace('/','')}"></canvas></td>
-        <td>
-          <div class="${up?'change-up':'change-down'}">${up?'+':''}${changePercent.toFixed(2)}%</div>
-          <div>${latest.toLocaleString(undefined,{maximumFractionDigits:4})}</div>
-        </td>`;
-      tbody.appendChild(row);
-
-      const canvas = document.getElementById('chart-fx-' + fx.pair.replace('/',''));
-      if (canvas) drawSparkline(canvas, values, up);
-    });
-  } catch (err) {
-    tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color:#f6465d;">Error: ' + err.message + '</td></tr>';
+  if (tbody.innerHTML === '') {
+    tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color:#f6465d;">Could not load forex data. আবার চেষ্টা করুন।</td></tr>';
   }
 }
 
