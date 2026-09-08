@@ -127,7 +127,7 @@
 
 <header>
   <button class="back-btn" id="back-btn" style="display:none;">&#8592;</button>
-  <h1 id="page-title">Smart Trading (Demo)</h1>
+  <h1 id="page-title">Smart Trading</h1>
 </header>
 
 <div id="coin-list-view"></div>
@@ -391,7 +391,7 @@ function openChart(coin) {
   listView.style.display = 'none';
   chartView.style.display = 'block';
   backBtn.style.display = 'block';
-  pageTitle.textContent = coin.short + '/USDT (Demo)';
+  pageTitle.textContent = coin.short + '/USDT';
   document.getElementById('chart-icon').src = iconUrl(coin.icon);
   document.getElementById('chart-pair').textContent = coin.short + '/USDT';
 
@@ -410,7 +410,7 @@ backBtn.addEventListener('click', () => {
   chartView.style.display = 'none';
   listView.style.display = 'block';
   backBtn.style.display = 'none';
-  pageTitle.textContent = 'Smart Trading (Demo)';
+  pageTitle.textContent = 'Smart Trading';
 });
 
 intervalSelect.addEventListener('change', () => {
