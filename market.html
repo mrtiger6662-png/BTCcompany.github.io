@@ -28,7 +28,7 @@
   th:last-child, td:last-child { text-align:right; }
   td { padding:10px 16px; border-top:1px solid #1e2329; }
   .coin-name { display:flex; align-items:center; gap:8px; font-weight:bold; }
-  .coin-name img { width:24px; height:24px; }
+  .coin-name img { width:24px; height:24px; border-radius:4px; }
   .coin-sub { color:#848e9c; font-size:12px; font-weight:normal; }
   .change-up { color:#0ecb81; }
   .change-down { color:#f6465d; }
@@ -58,7 +58,6 @@
   <button data-tab="futures">Futures</button>
   <button data-tab="forex">Forex</button>
   <button data-tab="stocks">Stocks</button>
-  <button data-tab="etf">ETF</button>
 </div>
 
 <div class="highlight-row" id="highlight-row"></div>
@@ -88,9 +87,8 @@ document.querySelectorAll('.tabs button').forEach(btn => {
       loadMarket();
     } else if (btn.dataset.tab === 'forex') {
       loadForex();
-    } else {
-      document.getElementById('market-body').innerHTML =
-        '<tr><td colspan="3" style="text-align:center; color:#848e9c; padding:30px;">Coming soon</td></tr>';
+    } else if (btn.dataset.tab === 'stocks') {
+      loadStocks();
     }
   });
 });
@@ -301,6 +299,95 @@ async function loadForex() {
 
   if (tbody.innerHTML === '') {
     tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color:#f6465d;">Could not load forex data. আবার চেষ্টা করুন।</td></tr>';
+  }
+}
+
+// ==== এখানে তোমার Finnhub key বসাও ====
+const FINNHUB_API_KEY = 'dafpl19r01quvmmgssp0dafpl19r01quvmmgsspg';
+
+const stockList = [
+  { symbol: 'AAPL', name: 'Apple Inc.', domain: 'apple.com' },
+  { symbol: 'MSFT', name: 'Microsoft', domain: 'microsoft.com' },
+  { symbol: 'GOOGL', name: 'Alphabet (Google)', domain: 'google.com' },
+  { symbol: 'AMZN', name: 'Amazon', domain: 'amazon.com' },
+  { symbol: 'NVDA', name: 'NVIDIA', domain: 'nvidia.com' },
+  { symbol: 'META', name: 'Meta Platforms', domain: 'meta.com' },
+  { symbol: 'TSLA', name: 'Tesla', domain: 'tesla.com' },
+  { symbol: 'AVGO', name: 'Broadcom', domain: 'broadcom.com' },
+  { symbol: 'ORCL', name: 'Oracle', domain: 'oracle.com' },
+  { symbol: 'NFLX', name: 'Netflix', domain: 'netflix.com' },
+  { symbol: 'AMD', name: 'AMD', domain: 'amd.com' },
+  { symbol: 'ADBE', name: 'Adobe', domain: 'adobe.com' },
+  { symbol: 'CRM', name: 'Salesforce', domain: 'salesforce.com' },
+  { symbol: 'INTC', name: 'Intel', domain: 'intel.com' },
+  { symbol: 'CSCO', name: 'Cisco', domain: 'cisco.com' },
+  { symbol: 'PEP', name: 'PepsiCo', domain: 'pepsico.com' },
+  { symbol: 'KO', name: 'Coca-Cola', domain: 'coca-colacompany.com' },
+  { symbol: 'WMT', name: 'Walmart', domain: 'walmart.com' },
+  { symbol: 'DIS', name: 'Walt Disney', domain: 'disney.com' },
+  { symbol: 'BA', name: 'Boeing', domain: 'boeing.com' }
+];
+
+async function loadStocks() {
+  const tbody = document.getElementById('market-body');
+  const highlightRow = document.getElementById('highlight-row');
+  tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color:#848e9c;">Loading...</td></tr>';
+  highlightRow.innerHTML = '';
+
+  if (!FINNHUB_API_KEY || FINNHUB_API_KEY === 'YOUR_FINNHUB_API_KEY_HERE') {
+    tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color:#f6465d;">দয়া করে কোডে তোমার Finnhub API key বসাও।</td></tr>';
+    return;
+  }
+
+  try {
+    const results = await Promise.all(stockList.map(async s => {
+      const res = await fetch(`https://finnhub.io/api/v1/quote?symbol=${s.symbol}&token=${FINNHUB_API_KEY}`);
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const q = await res.json();
+      return { ...s, ...q };
+    }));
+
+    tbody.innerHTML = '';
+    highlightRow.innerHTML = '';
+
+    results.forEach((s, idx) => {
+      if (s.c === undefined || s.c === 0) return;
+      const price = s.c;
+      const changePercent = s.dp ?? 0;
+      const up = changePercent >= 0;
+      const logoUrl = `https://logo.clearbit.com/${s.domain}`;
+
+      if (idx < 3) {
+        const hCard = document.createElement('div');
+        hCard.className = 'highlight-card';
+        hCard.innerHTML = `<div class="name">${s.symbol}</div><div class="price ${up?'change-up':'change-down'}">$${price.toFixed(2)}</div>`;
+        highlightRow.appendChild(hCard);
+      }
+
+      const row = document.createElement('tr');
+      row.innerHTML = `
+        <td>
+          <div class="coin-name">
+            <img src="${logoUrl}" onerror="this.style.visibility='hidden'">
+            <div>${s.symbol}<div class="coin-sub">${s.name}</div></div>
+          </div>
+        </td>
+        <td><canvas width="70" height="30" id="chart-stock-${s.symbol}"></canvas></td>
+        <td>
+          <div class="${up?'change-up':'change-down'}">${up?'+':''}${changePercent.toFixed(2)}%</div>
+          <div>$${price.toFixed(2)}</div>
+        </td>`;
+      tbody.appendChild(row);
+
+      const canvas = document.getElementById('chart-stock-' + s.symbol);
+      if (canvas) drawSparkline(canvas, [s.pc, s.l, s.o, s.h, s.c], up);
+    });
+
+    if (tbody.innerHTML === '') {
+      tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color:#f6465d;">Could not load stock data.</td></tr>';
+    }
+  } catch (err) {
+    tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color:#f6465d;">Error: ' + err.message + '</td></tr>';
   }
 }
 
