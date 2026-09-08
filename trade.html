@@ -906,7 +906,7 @@
           </div>
 
           <div class="duration-return">
-            ${d.returnPct.toFixed(2)}% return
+            ${d.returnPct.toFixed(0)}%
           </div>
         `;
 
@@ -944,6 +944,41 @@
 
 
     /* =========================
+       API HELPER
+    ========================== */
+
+    const API_BASES = [
+      'https://api.binance.com',
+      'https://api1.binance.com',
+      'https://api2.binance.com',
+      'https://api3.binance.com'
+    ];
+
+    async function fetchJson(path) {
+      let lastError = null;
+
+      for (const base of API_BASES) {
+        try {
+          const response = await fetch(base + path, {
+            method: 'GET',
+            cache: 'no-store'
+          });
+
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+          }
+
+          return await response.json();
+        } catch (error) {
+          lastError = error;
+        }
+      }
+
+      throw lastError || new Error('Unable to connect to Binance');
+    }
+
+
+    /* =========================
        LOAD COIN LIST
     ========================== */
 
@@ -974,26 +1009,9 @@
           );
 
 
-        const url =
-          'https://api.binance.com/api/v3/ticker/24hr?symbols='
-          + symbolsParam;
-
-
-        const res =
-          await fetch(url);
-
-
-        if (!res.ok) {
-
-          throw new Error(
-            'Failed to load market data'
-          );
-
-        }
-
-
-        const tickers =
-          await res.json();
+        const tickers = await fetchJson(
+          '/api/v3/ticker/24hr?symbols=' + symbolsParam
+        );
 
 
         listView.innerHTML = '';
@@ -1495,25 +1513,9 @@
           intervalSelect.value;
 
 
-        const url =
-          `https://api.binance.com/api/v3/klines?symbol=${currentSymbol.symbol}&interval=${interval}&limit=48`;
-
-
-        const res =
-          await fetch(url);
-
-
-        if (!res.ok) {
-
-          throw new Error(
-            'Chart data request failed'
-          );
-
-        }
-
-
-        const klines =
-          await res.json();
+        const klines = await fetchJson(
+          `/api/v3/klines?symbol=${currentSymbol.symbol}&interval=${interval}&limit=48`
+        );
 
 
         if (
@@ -1701,10 +1703,11 @@
 
       catch (err) {
 
-        console.error(
-          'Chart error:',
-          err
-        );
+        console.error('Chart error:', err);
+
+        document.getElementById('live-price').textContent = 'Unavailable';
+        document.getElementById('live-change').textContent = 'API error';
+        document.getElementById('live-change').className = 'change-down';
 
       }
 
