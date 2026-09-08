@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Market - ABC Company</title>
+<style>
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:Arial, sans-serif; background:#0b0e11; color:#eaecef; padding-bottom:70px; }
+  header { display:flex; align-items:center; justify-content:space-between; padding:16px 20px; }
+  header h1 { font-size:20px; margin:0; }
+  .icons { display:flex; gap:16px; }
+  .icons span { cursor:pointer; }
+  .tabs { display:flex; gap:10px; padding:0 16px 12px; overflow-x:auto; }
+  .tabs button {
+    background:#1e2329; border:1px solid #2b3139; color:#848e9c;
+    padding:8px 16px; border-radius:20px; white-space:nowrap; cursor:pointer;
+  }
+  .tabs button.active { background:#f0b90b; color:#202630; border-color:#f0b90b; font-weight:bold; }
+  .highlight-row { display:flex; gap:12px; padding:0 16px 16px; overflow-x:auto; }
+  .highlight-card {
+    background:#161a1e; border-radius:10px; padding:12px 16px; min-width:130px;
+  }
+  .highlight-card .name { font-size:13px; color:#848e9c; }
+  .highlight-card .price { font-size:16px; font-weight:bold; margin-top:4px; }
+  table { width:100%; border-collapse:collapse; }
+  th { text-align:left; color:#848e9c; font-size:13px; font-weight:normal; padding:8px 16px; }
+  th:last-child, td:last-child { text-align:right; }
+  td { padding:10px 16px; border-top:1px solid #1e2329; }
+  .coin-name { display:flex; align-items:center; gap:8px; font-weight:bold; }
+  .coin-name img { width:24px; height:24px; }
+  .coin-sub { color:#848e9c; font-size:12px; font-weight:normal; }
+  .change-up { color:#0ecb81; }
+  .change-down { color:#f6465d; }
+  canvas { display:block; }
+  .bottom-nav {
+    position:fixed; bottom:0; left:0; right:0; background:#161a1e;
+    display:flex; justify-content:space-around; padding:10px 0;
+    border-top:1px solid #2b3139;
+  }
+  .bottom-nav div { text-align:center; color:#848e9c; font-size:11px; cursor:pointer; }
+  .bottom-nav div.active { color:#f0b90b; }
+  .bottom-nav .ic { font-size:18px; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Market</h1>
+  <div class="icons">
+    <span>&#128269;</span>
+    <span>&#128276;</span>
+  </div>
+</header>
+
+<div class="tabs">
+  <button class="active" data-tab="crypto">Crypto</button>
+  <button data-tab="futures">Futures</button>
+  <button data-tab="forex">Forex</button>
+  <button data-tab="stocks">Stocks</button>
+  <button data-tab="etf">ETF</button>
+</div>
+
+<div class="highlight-row" id="highlight-row"></div>
+
+<table>
+  <thead>
+    <tr><th>Name</th><th>Chart</th><th>Price / 24h%</th></tr>
+  </thead>
+  <tbody id="market-body">
+    <tr><td colspan="3" style="text-align:center; color:#848e9c;">Loading...</td></tr>
+  </tbody>
+</table>
+
+<div class="bottom-nav">
+  <div class="active"><div class="ic">&#128200;</div>Market</div>
+  <div><div class="ic">&#128179;</div>Trade</div>
+  <div><div class="ic">&#128188;</div>Assets</div>
+  <div><div class="ic">&#128100;</div>Profile</div>
+</div>
+
+<script>
+document.querySelectorAll('.tabs button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tabs button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    if (btn.dataset.tab !== 'crypto') {
+      document.getElementById('market-body').innerHTML =
+        '<tr><td colspan="3" style="text-align:center; color:#848e9c; padding:30px;">Coming soon</td></tr>';
+    } else {
+      loadMarket();
+    }
+  });
+});
+
+const coinList = [
+  { symbol: 'BTCUSDT', name: 'Bitcoin', short: 'BTC', icon: 'btc' },
+  { symbol: 'ETHUSDT', name: 'Ethereum', short: 'ETH', icon: 'eth' },
+  { symbol: 'BNBUSDT', name: 'BNB', short: 'BNB', icon: 'bnb' },
+  { symbol: 'SOLUSDT', name: 'Solana', short: 'SOL', icon: 'sol' },
+  { symbol: 'XRPUSDT', name: 'XRP', short: 'XRP', icon: 'xrp' },
+  { symbol: 'ADAUSDT', name: 'Cardano', short: 'ADA', icon: 'ada' },
+  { symbol: 'DOGEUSDT', name: 'Dogecoin', short: 'DOGE', icon: 'doge' },
+  { symbol: 'TRXUSDT', name: 'TRON', short: 'TRX', icon: 'trx' },
+  { symbol: 'TONUSDT', name: 'Toncoin', short: 'TON', icon: 'ton' },
+  { symbol: 'DOTUSDT', name: 'Polkadot', short: 'DOT', icon: 'dot' },
+  { symbol: 'POLUSDT', name: 'Polygon', short: 'POL', icon: 'matic' },
+  { symbol: 'LTCUSDT', name: 'Litecoin', short: 'LTC', icon: 'ltc' },
+  { symbol: 'SHIBUSDT', name: 'Shiba Inu', short: 'SHIB', icon: 'shib' },
+  { symbol: 'AVAXUSDT', name: 'Avalanche', short: 'AVAX', icon: 'avax' },
+  { symbol: 'LINKUSDT', name: 'Chainlink', short: 'LINK', icon: 'link' },
+  { symbol: 'ATOMUSDT', name: 'Cosmos', short: 'ATOM', icon: 'atom' },
+  { symbol: 'UNIUSDT', name: 'Uniswap', short: 'UNI', icon: 'uni' },
+  { symbol: 'XLMUSDT', name: 'Stellar', short: 'XLM', icon: 'xlm' },
+  { symbol: 'NEARUSDT', name: 'NEAR Protocol', short: 'NEAR', icon: 'near' },
+  { symbol: 'APTUSDT', name: 'Aptos', short: 'APT', icon: 'apt' },
+  { symbol: 'ARBUSDT', name: 'Arbitrum', short: 'ARB', icon: 'arb' },
+  { symbol: 'OPUSDT', name: 'Optimism', short: 'OP', icon: 'op' },
+  { symbol: 'FILUSDT', name: 'Filecoin', short: 'FIL', icon: 'fil' },
+  { symbol: 'ICPUSDT', name: 'Internet Computer', short: 'ICP', icon: 'icp' },
+  { symbol: 'BCHUSDT', name: 'Bitcoin Cash', short: 'BCH', icon: 'bch' },
+  { symbol: 'ALGOUSDT', name: 'Algorand', short: 'ALGO', icon: 'algo' },
+  { symbol: 'VETUSDT', name: 'VeChain', short: 'VET', icon: 'vet' },
+  { symbol: 'SANDUSDT', name: 'The Sandbox', short: 'SAND', icon: 'sand' },
+  { symbol: 'MANAUSDT', name: 'Decentraland', short: 'MANA', icon: 'mana' },
+  { symbol: 'HBARUSDT', name: 'Hedera', short: 'HBAR', icon: 'hbar' }
+];
+
+function drawSparkline(canvas, prices, up) {
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width, h = canvas.height;
+  ctx.clearRect(0,0,w,h);
+  const min = Math.min(...prices), max = Math.max(...prices);
+  ctx.beginPath();
+  prices.forEach((p,i) => {
+    const x = (i/(prices.length-1))*w;
+    const y = h - ((p-min)/((max-min)||1))*h;
+    i===0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y);
+  });
+  ctx.strokeStyle = up ? '#0ecb81' : '#f6465d';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+}
+
+async function loadMarket() {
+  const tbody = document.getElementById('market-body');
+  const highlightRow = document.getElementById('highlight-row');
+  try {
+    const symbolsParam = encodeURIComponent(JSON.stringify(coinList.map(c => c.symbol)));
+    const tickerRes = await fetch('https://api.binance.com/api/v3/ticker/24hr?symbols=' + symbolsParam);
+    const tickers = await tickerRes.json();
+
+    tbody.innerHTML = '';
+    highlightRow.innerHTML = '';
+
+    for (const coin of coinList) {
+      const ticker = tickers.find(t => t.symbol === coin.symbol);
+      if (!ticker) continue;
+      const changePercent = parseFloat(ticker.priceChangePercent);
+      const up = changePercent >= 0;
+      const price = parseFloat(ticker.lastPrice);
+      const iconUrl = 'https://cdn.jsdelivr.net/gh/spothq/cryptocurrency-icons@master/128/color/' + coin.icon + '.png';
+
+      if (['BTCUSDT','ETHUSDT','XRPUSDT'].includes(coin.symbol)) {
+        const hCard = document.createElement('div');
+        hCard.className = 'highlight-card';
+        hCard.innerHTML = `<div class="name">${coin.short}/USDT</div><div class="price ${up?'change-up':'change-down'}">$${price.toLocaleString(undefined,{maximumFractionDigits:4})}</div>`;
+        highlightRow.appendChild(hCard);
+      }
+
+      const row = document.createElement('tr');
+      row.innerHTML = `
+        <td>
+          <div class="coin-name">
+            <img src="${iconUrl}" onerror="this.style.visibility='hidden'">
+            <div>${coin.short}/USDT<div class="coin-sub">${coin.name}</div></div>
+          </div>
+        </td>
+        <td><canvas width="70" height="30" id="chart-${coin.symbol}"></canvas></td>
+        <td>
+          <div class="${up?'change-up':'change-down'}">${up?'+':''}${changePercent.toFixed(2)}%</div>
+          <div>$${price.toLocaleString(undefined,{maximumFractionDigits:4})}</div>
+        </td>`;
+      tbody.appendChild(row);
+
+      fetch(`https://api.binance.com/api/v3/klines?symbol=${coin.symbol}&interval=1h&limit=24`)
+        .then(r => r.json())
+        .then(klines => {
+          const prices = klines.map(k => parseFloat(k[4]));
+          const canvas = document.getElementById('chart-' + coin.symbol);
+          if (canvas) drawSparkline(canvas, prices, up);
+        })
+        .catch(() => {});
+    }
+  } catch (err) {
+    tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color:#f6465d;">Could not load market
