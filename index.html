@@ -124,16 +124,16 @@
 
 <script>
 const coinList = [
-  { symbol: 'BTCUSDT', name: 'Bitcoin', short: 'BTC' },
-  { symbol: 'ETHUSDT', name: 'Ethereum', short: 'ETH' },
-  { symbol: 'BNBUSDT', name: 'BNB', short: 'BNB' },
-  { symbol: 'SOLUSDT', name: 'Solana', short: 'SOL' },
-  { symbol: 'XRPUSDT', name: 'XRP', short: 'XRP' },
-  { symbol: 'ADAUSDT', name: 'Cardano', short: 'ADA' },
-  { symbol: 'DOGEUSDT', name: 'Dogecoin', short: 'DOGE' },
-  { symbol: 'TRXUSDT', name: 'TRON', short: 'TRX' },
-  { symbol: 'TONUSDT', name: 'Toncoin', short: 'TON' },
-  { symbol: 'DOTUSDT', name: 'Polkadot', short: 'DOT' }
+  { symbol: 'BTCUSDT', name: 'Bitcoin', short: 'BTC', icon: 'btc' },
+  { symbol: 'ETHUSDT', name: 'Ethereum', short: 'ETH', icon: 'eth' },
+  { symbol: 'BNBUSDT', name: 'BNB', short: 'BNB', icon: 'bnb' },
+  { symbol: 'SOLUSDT', name: 'Solana', short: 'SOL', icon: 'sol' },
+  { symbol: 'XRPUSDT', name: 'XRP', short: 'XRP', icon: 'xrp' },
+  { symbol: 'ADAUSDT', name: 'Cardano', short: 'ADA', icon: 'ada' },
+  { symbol: 'DOGEUSDT', name: 'Dogecoin', short: 'DOGE', icon: 'doge' },
+  { symbol: 'TRXUSDT', name: 'TRON', short: 'TRX', icon: 'trx' },
+  { symbol: 'TONUSDT', name: 'Toncoin', short: 'TON', icon: 'ton' },
+  { symbol: 'DOTUSDT', name: 'Polkadot', short: 'DOT', icon: 'dot' }
 ];
 
 async function loadCrypto() {
@@ -156,11 +156,13 @@ async function loadCrypto() {
       const changeClass = changeUp ? 'crypto-change-up' : 'crypto-change-down';
       const changeSign = changeUp ? '+' : '';
       const price = parseFloat(ticker.lastPrice);
+      const iconUrl = 'https://cdn.jsdelivr.net/gh/spothq/cryptocurrency-icons@master/128/color/' + coinInfo.icon + '.png';
 
       const card = document.createElement('div');
       card.className = 'crypto-card';
       card.innerHTML = `
         <div class="crypto-left">
+          <img src="${iconUrl}" alt="${coinInfo.name}" onerror="this.style.visibility='hidden'">
           <div>
             <div class="crypto-name">${coinInfo.name}</div>
             <div class="crypto-symbol">${coinInfo.short}</div>
