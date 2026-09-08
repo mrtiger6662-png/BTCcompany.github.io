@@ -127,17 +127,14 @@
 
 <header>
   <button class="back-btn" id="back-btn" style="display:none;">&#8592;</button>
-  <h1 id="page-title">Smart Trading (Demo)</h1>
+  <h1 id="page-title">Smart Trading </h1>
 </header>
 
 <div id="coin-list-view"></div>
 
 <div id="chart-view">
 
-  <div class="demo-banner">
-    🎓 DEMO MODE — এটি একটি শিক্ষামূলক সিমুলেটর
-    <span>এখানে ব্যবহৃত সব টাকা ভার্চুয়াল। কোনো আসল অর্থ জমা, উত্তোলন বা লেনদেন হয় না।</span>
-  </div>
+ 
 
   <div class="balance-row">
     <div>
@@ -245,25 +242,6 @@ const durationList = [
   { seconds: 600, returnPct: 85.00, min: 100000, max: Infinity, step: 10000 }
 ];
 
-let selectedDuration = null;
-
-// ---------- Demo balance (virtual, stored locally in this browser only) ----------
-const BALANCE_KEY = 'demoBalance_v1';
-function getBalance() {
-  const v = localStorage.getItem(BALANCE_KEY);
-  return v === null ? 10000 : parseFloat(v);
-}
-function setBalance(val) {
-  localStorage.setItem(BALANCE_KEY, val.toFixed(2));
-  renderBalance();
-}
-function renderBalance() {
-  document.getElementById('balance-display').textContent =
-    '$' + getBalance().toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' (Virtual)';
-}
-document.getElementById('reset-balance-btn').addEventListener('click', () => {
-  setBalance(10000);
-});
 
 // ---------- Duration boxes ----------
 function renderDurationBoxes() {
