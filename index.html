@@ -5,104 +5,144 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ABC Company</title>
     <style>
+        * { box-sizing: border-box; }
         body {
             margin: 0;
             font-family: Arial, sans-serif;
-            background: #f5f5f5;
-            color: #222;
+            background: #0b0e11;
+            color: #eaecef;
         }
         header {
-            background: #111;
-            color: white;
-            padding: 20px;
-            text-align: center;
+            display:flex; align-items:center; justify-content:space-between;
+            padding: 16px 30px;
+            background:#0b0e11;
+            border-bottom: 1px solid #1e2329;
         }
-        nav {
-            background: #333;
-            text-align: center;
-            padding: 12px;
+        header .logo { font-size: 28px; font-weight:bold; color:#f0b90b; }
+        header .nav-right { display:flex; align-items:center; gap:12px; }
+        .btn-outline {
+            background:transparent; border:1px solid #474d57; color:#eaecef;
+            padding:8px 16px; border-radius:6px; cursor:pointer;
         }
-        nav a {
-            color: white;
-            text-decoration: none;
-            margin: 0 15px;
+        .btn-gold {
+            background:#f0b90b; border:none; color:#202630;
+            padding:8px 16px; border-radius:6px; font-weight:bold; cursor:pointer;
         }
         .hero {
-            text-align: center;
-            padding: 80px 20px;
-            background: white;
+            padding: 60px 30px 40px;
+            max-width: 900px;
+        }
+        .hero .stat {
+            font-size: 48px; font-weight:bold; color:#f0b90b; margin:0;
         }
         .hero h1 {
-            font-size: 45px;
+            font-size: 40px; margin: 4px 0 20px; color:#eaecef;
         }
-        .hero p {
-            font-size: 20px;
+        .hero p.tagline {
+            font-size: 18px; color:#848e9c; margin-bottom: 24px;
         }
-        .button {
-            display: inline-block;
-            padding: 12px 25px;
-            background: #111;
-            color: white;
-            text-decoration: none;
-            border-radius: 5px;
+        .badges { display:flex; gap:40px; margin-bottom: 30px; flex-wrap:wrap; }
+        .badge-title { color:#f0b90b; font-size:20px; font-weight:bold; }
+        .badge-sub { color:#848e9c; font-size:13px; }
+        .signup-row { display:flex; gap:10px; max-width:500px; margin-bottom:20px; }
+        .signup-row input {
+            flex:1; padding:14px; border-radius:6px; border:1px solid #474d57;
+            background:#1e2329; color:#eaecef; font-size:14px;
         }
-        section {
-            padding: 50px 20px;
+        .signup-row button {
+            padding:14px 30px; border-radius:6px; border:none;
+            background:#f0b90b; color:#202630; font-weight:bold; cursor:pointer;
+        }
+        .social-icons { display:flex; gap:10px; }
+        .social-icons div {
+            width:44px; height:44px; border-radius:8px; border:1px solid #474d57;
+            display:flex; align-items:center; justify-content:center; font-size:18px;
+        }
+        .crypto-panel {
+            background:#161a1e; border-radius:12px; margin: 20px 30px 50px;
+            padding: 20px;
+        }
+        .crypto-tabs { display:flex; gap:24px; border-bottom:1px solid #2b3139; padding-bottom:12px; margin-bottom:12px;}
+        .crypto-tabs span { color:#848e9c; cursor:pointer; }
+        .crypto-tabs span.active { color:#eaecef; font-weight:bold; border-bottom:2px solid #f0b90b; padding-bottom:12px; }
+        .crypto-card {
+          display:flex; align-items:center; justify-content:space-between;
+          padding:14px 10px; border-bottom: 1px solid #2b3139;
+        }
+        .crypto-card:last-child { border-bottom:none; }
+        .crypto-left{display:flex; align-items:center; gap:12px;}
+        .crypto-left img{width:32px; height:32px;}
+        .crypto-name{font-weight:bold; color:#eaecef;}
+        .crypto-symbol{color:#848e9c; font-size:13px;}
+        .crypto-right{text-align:right;}
+        .crypto-price{font-weight:bold; font-size:16px; color:#eaecef;}
+        .crypto-change-up{color:#0ecb81; font-size:13px;}
+        .crypto-change-down{color:#f6465d; font-size:13px;}
+        section.page-section {
+            padding: 50px 30px;
             max-width: 1000px;
             margin: auto;
+            background:#0b0e11;
         }
+        section.page-section h2 { color:#eaecef; }
+        section.page-section p, section.page-section h3 { color:#848e9c; }
         footer {
-            background: #111;
-            color: white;
+            background:#161a1e;
+            color:#848e9c;
             text-align: center;
             padding: 20px;
         }
-        .crypto-card {
-          display:flex; align-items:center; justify-content:space-between;
-          background:#fff; border-radius:10px; padding:14px 18px;
-          box-shadow:0 1px 4px rgba(0,0,0,0.15);
+        @media (max-width:600px){
+          .hero .stat{font-size:32px;} .hero h1{font-size:26px;}
         }
-        .crypto-left{display:flex; align-items:center; gap:12px;}
-        .crypto-left img{width:32px; height:32px;}
-        .crypto-name{font-weight:bold;}
-        .crypto-symbol{color:#777; font-size:13px; text-transform:uppercase;}
-        .crypto-right{text-align:right;}
-        .crypto-price{font-weight:bold; font-size:16px;}
-        .crypto-change-up{color:green; font-size:13px;}
-        .crypto-change-down{color:red; font-size:13px;}
     </style>
 </head>
 <body>
 <header>
-    <h1>ABC Company</h1>
+    <div class="logo">ABC Company</div>
+    <div class="nav-right">
+        <button class="btn-outline">Log In</button>
+        <button class="btn-gold">Sign Up</button>
+    </div>
 </header>
-<nav>
-    <a href="#home">Home</a>
-    <a href="#about">About</a>
-    <a href="#services">Services</a>
-    <a href="#contact">Contact</a>
-</nav>
 
-<section id="crypto-section" style="padding: 40px 20px; background:#e8e8e8; max-width:100%;">
-  <h2 style="text-align:center; margin-bottom: 24px;">Top 10 Cryptocurrencies</h2>
-  <div id="crypto-list" style="display:flex; flex-direction:column; gap:12px; max-width:800px; margin:0 auto;">
-    <p style="text-align:center;">Loading live prices...</p>
-  </div>
-</section>
+<div class="hero">
+    <p class="stat">1,200+</p>
+    <h1>Happy Customers</h1>
+    <p class="tagline">Quality products and professional services you can trust</p>
+    <div class="badges">
+        <div>
+            <div class="badge-title">5+ Years</div>
+            <div class="badge-sub">In Business</div>
+        </div>
+        <div>
+            <div class="badge-title">24/7</div>
+            <div class="badge-sub">Customer Support</div>
+        </div>
+    </div>
+    <div class="signup-row">
+        <input type="text" placeholder="Email/Phone number">
+        <button>Contact Us</button>
+    </div>
+</div>
 
-<section class="hero" id="home">
-    <h1>Welcome to ABC Company</h1>
-    <p>Quality products and professional services</p>
-    <a href="#contact" class="button">Contact Us</a>
-</section>
-<section id="about">
+<div class="crypto-panel">
+    <div class="crypto-tabs">
+        <span class="active">Top 10 Cryptocurrencies</span>
+    </div>
+    <div id="crypto-list">
+        <p style="text-align:center; color:#848e9c;">Loading live prices...</p>
+    </div>
+</div>
+
+<section class="page-section" id="about">
     <h2>About Us</h2>
     <p>
         Welcome to our company. We provide quality products
         and reliable services to our customers.
     </p>
 </section>
-<section id="services">
+<section class="page-section" id="services">
     <h2>Our Services</h2>
     <h3>Service 1</h3>
     <p>Description of your first service.</p>
@@ -111,7 +151,7 @@
     <h3>Service 3</h3>
     <p>Description of your third service.</p>
 </section>
-<section id="contact">
+<section class="page-section" id="contact">
     <h2>Contact Us</h2>
     <p>Phone: +1 000 000 0000</p>
     <p>Email: example@email.com</p>
@@ -164,18 +204,17 @@ async function loadCrypto() {
         <div class="crypto-left">
           <img src="${iconUrl}" alt="${coinInfo.name}" onerror="this.style.visibility='hidden'">
           <div>
-            <div class="crypto-name">${coinInfo.name}</div>
-            <div class="crypto-symbol">${coinInfo.short}</div>
+            <div class="crypto-name">${coinInfo.short} <span class="crypto-symbol">${coinInfo.name}</span></div>
           </div>
         </div>
-        <div class="crypto-right">
+        <div class="crypto-right" style="display:flex; gap:24px; align-items:center;">
           <div class="crypto-price">$${price.toLocaleString(undefined, {maximumFractionDigits: 4})}</div>
           <div class="${changeClass}">${changeSign}${changePercent.toFixed(2)}%</div>
         </div>`;
       listEl.appendChild(card);
     });
   } catch (err) {
-    listEl.innerHTML = '<p style="text-align:center;color:red;">Could not load prices right now. Please refresh the page in a moment.</p>';
+    listEl.innerHTML = '<p style="text-align:center;color:#f6465d;">Could not load prices right now. Please refresh the page in a moment.</p>';
   }
 }
 loadCrypto();
