@@ -123,37 +123,51 @@
 </footer>
 
 <script>
+const coinList = [
+  { symbol: 'BTCUSDT', name: 'Bitcoin', short: 'BTC' },
+  { symbol: 'ETHUSDT', name: 'Ethereum', short: 'ETH' },
+  { symbol: 'BNBUSDT', name: 'BNB', short: 'BNB' },
+  { symbol: 'SOLUSDT', name: 'Solana', short: 'SOL' },
+  { symbol: 'XRPUSDT', name: 'XRP', short: 'XRP' },
+  { symbol: 'ADAUSDT', name: 'Cardano', short: 'ADA' },
+  { symbol: 'DOGEUSDT', name: 'Dogecoin', short: 'DOGE' },
+  { symbol: 'TRXUSDT', name: 'TRON', short: 'TRX' },
+  { symbol: 'TONUSDT', name: 'Toncoin', short: 'TON' },
+  { symbol: 'DOTUSDT', name: 'Polkadot', short: 'DOT' }
+];
+
 async function loadCrypto() {
   const listEl = document.getElementById('crypto-list');
   try {
-    const res = await fetch('https://api.coincap.io/v2/assets?limit=10');
+    const symbolsParam = encodeURIComponent(JSON.stringify(coinList.map(c => c.symbol)));
+    const res = await fetch('https://api.binance.com/api/v3/ticker/24hr?symbols=' + symbolsParam);
     if (!res.ok) {
       throw new Error('API status ' + res.status);
     }
     const data = await res.json();
-    const coins = data.data;
     listEl.innerHTML = '';
 
-    coins.forEach(coin => {
-      const changePercent = parseFloat(coin.changePercent24Hr);
+    coinList.forEach(coinInfo => {
+      const ticker = data.find(d => d.symbol === coinInfo.symbol);
+      if (!ticker) return;
+
+      const changePercent = parseFloat(ticker.priceChangePercent);
       const changeUp = changePercent >= 0;
       const changeClass = changeUp ? 'crypto-change-up' : 'crypto-change-down';
       const changeSign = changeUp ? '+' : '';
-      const price = parseFloat(coin.priceUsd);
-      const iconUrl = 'https://assets.coincap.io/assets/icons/' + coin.symbol.toLowerCase() + '@2x.png';
+      const price = parseFloat(ticker.lastPrice);
 
       const card = document.createElement('div');
       card.className = 'crypto-card';
       card.innerHTML = `
         <div class="crypto-left">
-          <img src="${iconUrl}" alt="${coin.name}" onerror="this.style.display='none'">
           <div>
-            <div class="crypto-name">${coin.name}</div>
-            <div class="crypto-symbol">${coin.symbol}</div>
+            <div class="crypto-name">${coinInfo.name}</div>
+            <div class="crypto-symbol">${coinInfo.short}</div>
           </div>
         </div>
         <div class="crypto-right">
-          <div class="crypto-price">$${price.toLocaleString(undefined, {maximumFractionDigits: 2})}</div>
+          <div class="crypto-price">$${price.toLocaleString(undefined, {maximumFractionDigits: 4})}</div>
           <div class="${changeClass}">${changeSign}${changePercent.toFixed(2)}%</div>
         </div>`;
       listEl.appendChild(card);
