@@ -193,4 +193,13 @@ async function loadMarket() {
         .catch(() => {});
     }
   } catch (err) {
-    tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color:#f6465d;">Could not load market
+    tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color:#f6465d;">Could not load market data. Please refresh.</td></tr>';
+  }
+}
+
+loadMarket();
+setInterval(loadMarket, 60000);
+</script>
+
+</body>
+</html>
