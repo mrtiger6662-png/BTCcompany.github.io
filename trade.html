@@ -1,1726 +1,359 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Trade - ABC Company</title>
+<style>
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:Arial, sans-serif; background:#0b0e11; color:#eaecef; padding-bottom:70px; }
+  header { display:flex; align-items:center; justify-content:center; padding:16px 20px; position:relative; }
+  header h1 { font-size:20px; margin:0; color:#f0b90b; }
+  .back-btn {
+    position:absolute; left:16px; top:50%; transform:translateY(-50%);
+    background:none; border:none; color:#eaecef; font-size:20px; cursor:pointer;
+  }
+  #coin-list-view .coin-row {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:14px 16px; border-bottom:1px solid #1e2329; cursor:pointer;
+  }
+  #coin-list-view .coin-row:active { background:#1e2329; }
+  .coin-left { display:flex; align-items:center; gap:10px; }
+  .coin-left img { width:28px; height:28px; border-radius:50%; }
+  .coin-name { font-weight:bold; }
+  .coin-sub { color:#848e9c; font-size:12px; }
+  .coin-right { text-align:right; }
+  .coin-price { font-weight:bold; }
+  .change-up { color:#0ecb81; }
+  .change-down { color:#f6465d; }
 
-  <title>Trade - ABC Company</title>
+  #chart-view { display:none; padding:16px; }
+  .chart-header { display:flex; align-items:center; gap:10px; margin-bottom:8px; }
+  .chart-header img { width:26px; height:26px; border-radius:50%; }
+  .chart-header .pair-name { font-weight:bold; font-size:18px; }
+  .chart-card { background:#161a1e; border-radius:12px; padding:16px; }
+  .price-row { display:flex; align-items:baseline; gap:10px; margin-bottom:12px; }
+  .price-row .big-price { font-size:22px; font-weight:bold; }
+  .ohlc-grid { display:grid; grid-template-columns:1fr 1fr; gap:6px 20px; margin-bottom:14px; font-size:13px; color:#848e9c; }
+  .ohlc-grid span.val { color:#eaecef; font-weight:bold; }
+  .interval-select {
+    background:#1e2329; color:#eaecef; border:1px solid #2b3139; border-radius:6px;
+    padding:6px 10px; margin-left:auto; cursor:pointer;
+  }
+  canvas#candles { width:100%; height:260px; display:block; }
+  canvas#volume { width:100%; height:60px; display:block; margin-top:4px; }
+  .time-labels { display:flex; justify-content:space-between; font-size:11px; color:#848e9c; margin-top:4px; }
 
-  <style>
-    * {
-      box-sizing: border-box;
-    }
+  .duration-row { display:grid; grid-template-columns:repeat(5,1fr); gap:8px; margin-top:16px; }
+  .duration-box {
+    background:#1e2329; border:1px solid #2b3139; border-radius:8px;
+    padding:12px 4px; text-align:center; cursor:pointer; transition:0.15s;
+  }
+  .duration-box:active { transform:scale(0.97); }
+  .duration-box.selected { border-color:#f0b90b; background:rgba(240,185,11,0.1); }
+  .duration-time { font-size:17px; font-weight:bold; color:#f0b90b; }
+  .duration-return { font-size:10px; color:#848e9c; margin-top:4px; line-height:1.3; }
 
-    body {
-      margin: 0;
-      font-family: Arial, sans-serif;
-      background: #0b0e11;
-      color: #eaecef;
-      padding-bottom: 80px;
-    }
-
-    /* =========================
-       HEADER
-    ========================== */
-
-    header {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 16px 20px;
-      position: relative;
-      border-bottom: 1px solid #1e2329;
-    }
-
-    header h1 {
-      font-size: 20px;
-      margin: 0;
-      color: #f0b90b;
-    }
-
-    .back-btn {
-      position: absolute;
-      left: 16px;
-      top: 50%;
-      transform: translateY(-50%);
-      background: none;
-      border: none;
-      color: #eaecef;
-      font-size: 24px;
-      cursor: pointer;
-    }
-
-    /* =========================
-       COIN LIST
-    ========================== */
-
-    #coin-list-view .coin-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 14px 16px;
-      border-bottom: 1px solid #1e2329;
-      cursor: pointer;
-      transition: background 0.15s;
-    }
-
-    #coin-list-view .coin-row:hover {
-      background: #161a1e;
-    }
-
-    #coin-list-view .coin-row:active {
-      background: #1e2329;
-    }
-
-    .coin-left {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .coin-left img {
-      width: 28px;
-      height: 28px;
-      border-radius: 50%;
-    }
-
-    .coin-name {
-      font-weight: bold;
-    }
-
-    .coin-sub {
-      color: #848e9c;
-      font-size: 12px;
-      margin-top: 3px;
-    }
-
-    .coin-right {
-      text-align: right;
-    }
-
-    .coin-price {
-      font-weight: bold;
-    }
-
-    .change-up {
-      color: #0ecb81;
-    }
-
-    .change-down {
-      color: #f6465d;
-    }
-
-    /* =========================
-       CHART VIEW
-    ========================== */
-
-    #chart-view {
-      display: none;
-      padding: 16px;
-    }
-
-    .chart-header {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      margin-bottom: 8px;
-    }
-
-    .chart-header img {
-      width: 26px;
-      height: 26px;
-      border-radius: 50%;
-    }
-
-    .chart-header .pair-name {
-      font-weight: bold;
-      font-size: 18px;
-    }
-
-    .interval-select {
-      background: #1e2329;
-      color: #eaecef;
-      border: 1px solid #2b3139;
-      border-radius: 6px;
-      padding: 6px 10px;
-      margin-left: auto;
-      cursor: pointer;
-    }
-
-    .chart-card {
-      background: #161a1e;
-      border-radius: 12px;
-      padding: 16px;
-    }
-
-    .price-row {
-      display: flex;
-      align-items: baseline;
-      gap: 10px;
-      margin-bottom: 12px;
-    }
-
-    .price-row .big-price {
-      font-size: 22px;
-      font-weight: bold;
-    }
-
-    .ohlc-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 6px 20px;
-      margin-bottom: 14px;
-      font-size: 13px;
-      color: #848e9c;
-    }
-
-    .ohlc-grid span.val {
-      color: #eaecef;
-      font-weight: bold;
-    }
-
-    /* =========================
-       CANVAS
-    ========================== */
-
-    canvas#candles {
-      width: 100%;
-      height: 260px;
-      display: block;
-    }
-
-    canvas#volume {
-      width: 100%;
-      height: 60px;
-      display: block;
-      margin-top: 4px;
-    }
-
-    .time-labels {
-      display: flex;
-      justify-content: space-between;
-      gap: 10px;
-      font-size: 11px;
-      color: #848e9c;
-      margin-top: 4px;
-    }
-
-    .time-labels span {
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-
-    /* =========================
-       DURATION BOXES
-    ========================== */
-
-    .duration-row {
-      display: grid;
-      grid-template-columns: repeat(5, 1fr);
-      gap: 8px;
-      margin-top: 18px;
-    }
-
-    .duration-box {
-      background: #1e2329;
-      border: 1px solid #2b3139;
-      border-radius: 8px;
-      padding: 12px 4px;
-      text-align: center;
-      cursor: pointer;
-      transition:
-        transform 0.15s,
-        border-color 0.15s,
-        background 0.15s,
-        box-shadow 0.15s;
-      user-select: none;
-    }
-
-    .duration-box:hover {
-      border-color: #f0b90b;
-    }
-
-    .duration-box:active {
-      transform: scale(0.97);
-    }
-
-    .duration-box.selected {
-      border: 1px solid #f0b90b;
-      background: rgba(240, 185, 11, 0.10);
-      box-shadow: 0 0 10px rgba(240, 185, 11, 0.18);
-    }
-
-    .duration-time {
-      font-size: 17px;
-      font-weight: bold;
-      color: #f0b90b;
-    }
-
-    .duration-return {
-      font-size: 10px;
-      color: #848e9c;
-      margin-top: 4px;
-      line-height: 1.3;
-    }
-
-    /* =========================
-       BOTTOM NAVIGATION
-    ========================== */
-
-    .bottom-nav {
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      z-index: 1000;
-
-      background: #161a1e;
-      display: flex;
-      justify-content: space-around;
-
-      padding: 8px 0 calc(8px + env(safe-area-inset-bottom));
-
-      border-top: 1px solid #2b3139;
-    }
-
-    .bottom-nav a {
-      flex: 1;
-      text-decoration: none;
-      color: inherit;
-    }
-
-    .bottom-nav-item {
-      text-align: center;
-      color: #848e9c;
-      font-size: 11px;
-      cursor: pointer;
-    }
-
-    .bottom-nav-item.active {
-      color: #f0b90b;
-    }
-
-    .bottom-nav .ic {
-      font-size: 18px;
-      width: 38px;
-      height: 38px;
-      line-height: 38px;
-      margin: 0 auto 2px;
-      border-radius: 50%;
-      transition: 0.2s;
-    }
-
-    .bottom-nav-item.active .ic {
-      background: rgba(240, 185, 11, 0.15);
-      box-shadow:
-        0 0 0 6px rgba(240, 185, 11, 0.08),
-        0 0 14px rgba(240, 185, 11, 0.15);
-    }
-
-    /* =========================
-       MOBILE
-    ========================== */
-
-    @media (max-width: 500px) {
-
-      #chart-view {
-        padding: 10px;
-      }
-
-      .chart-card {
-        padding: 12px;
-      }
-
-      .duration-row {
-        gap: 5px;
-      }
-
-      .duration-box {
-        padding: 10px 2px;
-      }
-
-      .duration-time {
-        font-size: 14px;
-      }
-
-      .duration-return {
-        font-size: 9px;
-      }
-
-      canvas#candles {
-        height: 230px;
-      }
-    }
-  </style>
+  .bottom-nav {
+    position:fixed; bottom:0; left:0; right:0; background:#161a1e;
+    display:flex; justify-content:space-around; padding:10px 0;
+    border-top:1px solid #2b3139;
+  }
+  .bottom-nav div { text-align:center; color:#848e9c; font-size:11px; cursor:pointer; }
+.bottom-nav div.active { color:#f0b90b; }
+.bottom-nav .ic {
+  font-size:18px; width:38px; height:38px; line-height:38px;
+  margin:0 auto 2px; border-radius:50%; transition:0.2s;
+}
+.bottom-nav div.active .ic {
+  background:rgba(240,185,11,0.15);
+  box-shadow:0 0 0 6px rgba(240,185,11,0.08);
+}
+</style>
 </head>
-
 <body>
 
-  <!-- =========================
-       HEADER
-  ========================== -->
+<header>
+  <button class="back-btn" id="back-btn" style="display:none;">&#8592;</button>
+  <h1 id="page-title">Smart Trading</h1>
+</header>
 
-  <header>
+<div id="coin-list-view"></div>
 
-    <button
-      class="back-btn"
-      id="back-btn"
-      style="display: none;"
-      aria-label="Back"
-    >
-      &#8592;
-    </button>
-
-    <h1 id="page-title">Smart Trading</h1>
-
-  </header>
-
-
-  <!-- =========================
-       COIN LIST
-  ========================== -->
-
-  <div id="coin-list-view"></div>
-
-
-  <!-- =========================
-       CHART VIEW
-  ========================== -->
-
-  <div id="chart-view">
-
-    <div class="chart-header">
-
-      <img
-        id="chart-icon"
-        src=""
-        alt=""
-      >
-
-      <span
-        class="pair-name"
-        id="chart-pair"
-      ></span>
-
-      <select
-        class="interval-select"
-        id="interval-select"
-      >
-        <option value="1m">1min</option>
-        <option value="5m">5min</option>
-        <option value="15m" selected>15min</option>
-        <option value="1h">1hour</option>
-        <option value="4h">4hour</option>
-        <option value="1d">1day</option>
-      </select>
-
-    </div>
-
-
-    <div class="chart-card">
-
-      <!-- PRICE -->
-
-      <div class="price-row">
-
-        <div
-          class="big-price"
-          id="live-price"
-        >
-          -
-        </div>
-
-        <div id="live-change">
-          -
-        </div>
-
-      </div>
-
-
-      <!-- OHLC -->
-
-      <div class="ohlc-grid">
-
-        <div>
-          Open:
-          <span
-            class="val"
-            id="ohlc-open"
-          >-</span>
-        </div>
-
-        <div>
-          High:
-          <span
-            class="val"
-            id="ohlc-high"
-          >-</span>
-        </div>
-
-        <div>
-          Low:
-          <span
-            class="val"
-            id="ohlc-low"
-          >-</span>
-        </div>
-
-        <div>
-          Close:
-          <span
-            class="val"
-            id="ohlc-close"
-          >-</span>
-        </div>
-
-      </div>
-
-
-      <!-- CANDLE CHART -->
-
-      <canvas
-        id="candles"
-        width="700"
-        height="260"
-      ></canvas>
-
-
-      <!-- VOLUME -->
-
-      <canvas
-        id="volume"
-        width="700"
-        height="60"
-      ></canvas>
-
-
-      <!-- TIME -->
-
-      <div
-        class="time-labels"
-        id="time-labels"
-      ></div>
-
-
-      <!-- =========================
-           DURATION BOXES
-      ========================== -->
-
-      <div
-        class="duration-row"
-        id="duration-row"
-      ></div>
-
-    </div>
-
+<div id="chart-view">
+  <div class="chart-header">
+    <img id="chart-icon" src="" alt="">
+    <span class="pair-name" id="chart-pair"></span>
+    <select class="interval-select" id="interval-select">
+      <option value="1m">1min</option>
+      <option value="5m">5min</option>
+      <option value="15min" selected>15min</option>
+      <option value="1h">1hour</option>
+      <option value="4h">4hour</option>
+      <option value="1d">1day</option>
+    </select>
   </div>
-
-
-  <!-- =========================
-       BOTTOM NAVIGATION
-  ========================== -->
-
-  <div class="bottom-nav">
-
-    <a href="market.html">
-      <div class="bottom-nav-item">
-
-        <div class="ic">
-          &#128200;
-        </div>
-
-        <div>
-          Market
-        </div>
-
-      </div>
-    </a>
-
-
-    <div class="bottom-nav-item active">
-
-      <div class="ic">
-        &#128179;
-      </div>
-
-      <div>
-        Trade
-      </div>
-
+  <div class="chart-card">
+    <div class="price-row">
+      <div class="big-price" id="live-price">-</div>
+      <div id="live-change">-</div>
     </div>
-
-
-    <div class="bottom-nav-item">
-
-      <div class="ic">
-        &#128188;
-      </div>
-
-      <div>
-        Assets
-      </div>
-
+    <div class="ohlc-grid">
+      <div>Open: <span class="val" id="ohlc-open">-</span></div>
+      <div>High: <span class="val" id="ohlc-high">-</span></div>
+      <div>Low: <span class="val" id="ohlc-low">-</span></div>
+      <div>Close: <span class="val" id="ohlc-close">-</span></div>
     </div>
+    <canvas id="candles" width="700" height="260"></canvas>
+    <canvas id="volume" width="700" height="60"></canvas>
+    <div class="time-labels" id="time-labels"></div>
 
-
-    <div class="bottom-nav-item">
-
-      <div class="ic">
-        &#128100;
-      </div>
-
-      <div>
-        Profile
-      </div>
-
-    </div>
-
+    <div class="duration-row" id="duration-row"></div>
   </div>
-
-
-  <!-- =========================
-       JAVASCRIPT
-  ========================== -->
-
-  <script>
-
-    /* =========================
-       COINS
-    ========================== */
-
-    const coinList = [
-
-      {
-        symbol: 'BTCUSDT',
-        name: 'Bitcoin',
-        short: 'BTC',
-        icon: 'btc'
-      },
-
-      {
-        symbol: 'ETHUSDT',
-        name: 'Ethereum',
-        short: 'ETH',
-        icon: 'eth'
-      },
-
-      {
-        symbol: 'BNBUSDT',
-        name: 'BNB',
-        short: 'BNB',
-        icon: 'bnb'
-      },
-
-      {
-        symbol: 'SOLUSDT',
-        name: 'Solana',
-        short: 'SOL',
-        icon: 'sol'
-      },
-
-      {
-        symbol: 'XRPUSDT',
-        name: 'XRP',
-        short: 'XRP',
-        icon: 'xrp'
-      },
-
-      {
-        symbol: 'ADAUSDT',
-        name: 'Cardano',
-        short: 'ADA',
-        icon: 'ada'
-      },
-
-      {
-        symbol: 'DOGEUSDT',
-        name: 'Dogecoin',
-        short: 'DOGE',
-        icon: 'doge'
-      },
-
-      {
-        symbol: 'TRXUSDT',
-        name: 'TRON',
-        short: 'TRX',
-        icon: 'trx'
-      },
-
-      {
-        symbol: 'TONUSDT',
-        name: 'Toncoin',
-        short: 'TON',
-        icon: 'ton'
-      },
-
-      {
-        symbol: 'DOTUSDT',
-        name: 'Polkadot',
-        short: 'DOT',
-        icon: 'dot'
-      },
-
-      {
-        symbol: 'POLUSDT',
-        name: 'Polygon',
-        short: 'POL',
-        icon: 'matic'
-      },
-
-      {
-        symbol: 'LTCUSDT',
-        name: 'Litecoin',
-        short: 'LTC',
-        icon: 'ltc'
-      },
-
-      {
-        symbol: 'SHIBUSDT',
-        name: 'Shiba Inu',
-        short: 'SHIB',
-        icon: 'shib'
-      },
-
-      {
-        symbol: 'AVAXUSDT',
-        name: 'Avalanche',
-        short: 'AVAX',
-        icon: 'avax'
-      },
-
-      {
-        symbol: 'LINKUSDT',
-        name: 'Chainlink',
-        short: 'LINK',
-        icon: 'link'
-      },
-
-      {
-        symbol: 'ATOMUSDT',
-        name: 'Cosmos',
-        short: 'ATOM',
-        icon: 'atom'
-      },
-
-      {
-        symbol: 'UNIUSDT',
-        name: 'Uniswap',
-        short: 'UNI',
-        icon: 'uni'
-      },
-
-      {
-        symbol: 'XLMUSDT',
-        name: 'Stellar',
-        short: 'XLM',
-        icon: 'xlm'
-      },
-
-      {
-        symbol: 'NEARUSDT',
-        name: 'NEAR Protocol',
-        short: 'NEAR',
-        icon: 'near'
-      },
-
-      {
-        symbol: 'APTUSDT',
-        name: 'Aptos',
-        short: 'APT',
-        icon: 'apt'
-      },
-
-      {
-        symbol: 'ARBUSDT',
-        name: 'Arbitrum',
-        short: 'ARB',
-        icon: 'arb'
-      },
-
-      {
-        symbol: 'OPUSDT',
-        name: 'Optimism',
-        short: 'OP',
-        icon: 'op'
-      },
-
-      {
-        symbol: 'FILUSDT',
-        name: 'Filecoin',
-        short: 'FIL',
-        icon: 'fil'
-      },
-
-      {
-        symbol: 'ICPUSDT',
-        name: 'Internet Computer',
-        short: 'ICP',
-        icon: 'icp'
-      },
-
-      {
-        symbol: 'BCHUSDT',
-        name: 'Bitcoin Cash',
-        short: 'BCH',
-        icon: 'bch'
-      },
-
-      {
-        symbol: 'ALGOUSDT',
-        name: 'Algorand',
-        short: 'ALGO',
-        icon: 'algo'
-      },
-
-      {
-        symbol: 'VETUSDT',
-        name: 'VeChain',
-        short: 'VET',
-        icon: 'vet'
-      },
-
-      {
-        symbol: 'SANDUSDT',
-        name: 'The Sandbox',
-        short: 'SAND',
-        icon: 'sand'
-      },
-
-      {
-        symbol: 'MANAUSDT',
-        name: 'Decentraland',
-        short: 'MANA',
-        icon: 'mana'
-      },
-
-      {
-        symbol: 'HBARUSDT',
-        name: 'Hedera',
-        short: 'HBAR',
-        icon: 'hbar'
-      }
-
-    ];
-
-
-    /* =========================
-       DURATION LIST
-    ========================== */
-
-    const durationList = [
-
-      {
-        seconds: 60,
-        returnPct: 20.00
-      },
-
-      {
-        seconds: 120,
-        returnPct: 25.00
-      },
-
-      {
-        seconds: 180,
-        returnPct: 30.00
-      },
-
-      {
-        seconds: 300,
-        returnPct: 50.00
-      },
-
-      {
-        seconds: 600,
-        returnPct: 85.00
-      }
-
-    ];
-
-
-    let selectedDuration = null;
-
-
-    /* =========================
-       ELEMENTS
-    ========================== */
-
-    const listView =
-      document.getElementById('coin-list-view');
-
-    const chartView =
-      document.getElementById('chart-view');
-
-    const backBtn =
-      document.getElementById('back-btn');
-
-    const pageTitle =
-      document.getElementById('page-title');
-
-    const intervalSelect =
-      document.getElementById('interval-select');
-
-
-    let currentSymbol = null;
-
-    let refreshTimer = null;
-
-
-    /* =========================
-       ICON URL
-    ========================== */
-
-    function iconUrl(icon) {
-
-      return (
-        'https://cdn.jsdelivr.net/gh/spothq/cryptocurrency-icons@master/128/color/'
-        + icon +
-        '.png'
-      );
-
-    }
-
-
-    /* =========================
-       DURATION BOXES
-    ========================== */
-
-    function renderDurationBoxes() {
-
-      const row =
-        document.getElementById('duration-row');
-
-      row.innerHTML = '';
-
-      durationList.forEach((d) => {
-
-        const box =
-          document.createElement('div');
-
-        box.className =
-          'duration-box';
-
-        box.innerHTML = `
-          <div class="duration-time">
-            ${d.seconds}s
+</div>
+
+<div class="bottom-nav">
+  <a href="market.html" style="text-decoration:none;"><div><div class="ic">&#128200;</div>Market</div></a>
+  <div class="active"><div class="ic">&#128179;</div>Trade</div>
+  <div><div class="ic">&#128188;</div>Assets</div>
+  <div><div class="ic">&#128100;</div>Profile</div>
+</div>
+
+<script>
+const coinList = [
+  { symbol: 'BTCUSDT', name: 'Bitcoin', short: 'BTC', icon: 'btc' },
+  { symbol: 'ETHUSDT', name: 'Ethereum', short: 'ETH', icon: 'eth' },
+  { symbol: 'BNBUSDT', name: 'BNB', short: 'BNB', icon: 'bnb' },
+  { symbol: 'SOLUSDT', name: 'Solana', short: 'SOL', icon: 'sol' },
+  { symbol: 'XRPUSDT', name: 'XRP', short: 'XRP', icon: 'xrp' },
+  { symbol: 'ADAUSDT', name: 'Cardano', short: 'ADA', icon: 'ada' },
+  { symbol: 'DOGEUSDT', name: 'Dogecoin', short: 'DOGE', icon: 'doge' },
+  { symbol: 'TRXUSDT', name: 'TRON', short: 'TRX', icon: 'trx' },
+  { symbol: 'TONUSDT', name: 'Toncoin', short: 'TON', icon: 'ton' },
+  { symbol: 'DOTUSDT', name: 'Polkadot', short: 'DOT', icon: 'dot' },
+  { symbol: 'POLUSDT', name: 'Polygon', short: 'POL', icon: 'matic' },
+  { symbol: 'LTCUSDT', name: 'Litecoin', short: 'LTC', icon: 'ltc' },
+  { symbol: 'SHIBUSDT', name: 'Shiba Inu', short: 'SHIB', icon: 'shib' },
+  { symbol: 'AVAXUSDT', name: 'Avalanche', short: 'AVAX', icon: 'avax' },
+  { symbol: 'LINKUSDT', name: 'Chainlink', short: 'LINK', icon: 'link' },
+  { symbol: 'ATOMUSDT', name: 'Cosmos', short: 'ATOM', icon: 'atom' },
+  { symbol: 'UNIUSDT', name: 'Uniswap', short: 'UNI', icon: 'uni' },
+  { symbol: 'XLMUSDT', name: 'Stellar', short: 'XLM', icon: 'xlm' },
+  { symbol: 'NEARUSDT', name: 'NEAR Protocol', short: 'NEAR', icon: 'near' },
+  { symbol: 'APTUSDT', name: 'Aptos', short: 'APT', icon: 'apt' },
+  { symbol: 'ARBUSDT', name: 'Arbitrum', short: 'ARB', icon: 'arb' },
+  { symbol: 'OPUSDT', name: 'Optimism', short: 'OP', icon: 'op' },
+  { symbol: 'FILUSDT', name: 'Filecoin', short: 'FIL', icon: 'fil' },
+  { symbol: 'ICPUSDT', name: 'Internet Computer', short: 'ICP', icon: 'icp' },
+  { symbol: 'BCHUSDT', name: 'Bitcoin Cash', short: 'BCH', icon: 'bch' },
+  { symbol: 'ALGOUSDT', name: 'Algorand', short: 'ALGO', icon: 'algo' },
+  { symbol: 'VETUSDT', name: 'VeChain', short: 'VET', icon: 'vet' },
+  { symbol: 'SANDUSDT', name: 'The Sandbox', short: 'SAND', icon: 'sand' },
+  { symbol: 'MANAUSDT', name: 'Decentraland', short: 'MANA', icon: 'mana' },
+  { symbol: 'HBARUSDT', name: 'Hedera', short: 'HBAR', icon: 'hbar' }
+];
+
+const durationList = [
+  { seconds: 60, returnPct: 20.00 },
+  { seconds: 120, returnPct: 25.00 },
+  { seconds: 180, returnPct: 30.00 },
+  { seconds: 300, returnPct: 50.00 },
+  { seconds: 600, returnPct: 85.00 }
+];
+
+let selectedDuration = null;
+
+function renderDurationBoxes() {
+  const row = document.getElementById('duration-row');
+  row.innerHTML = '';
+  durationList.forEach(d => {
+    const box = document.createElement('div');
+    box.className = 'duration-box';
+    box.innerHTML = `<div class="duration-time">${d.seconds}s</div><div class="duration-return">${d.returnPct.toFixed(2)}% return</div>`;
+    box.addEventListener('click', () => {
+      document.querySelectorAll('.duration-box').forEach(b => b.classList.remove('selected'));
+      box.classList.add('selected');
+      selectedDuration = d;
+    });
+    row.appendChild(box);
+  });
+}
+
+const listView = document.getElementById('coin-list-view');
+const chartView = document.getElementById('chart-view');
+const backBtn = document.getElementById('back-btn');
+const pageTitle = document.getElementById('page-title');
+const intervalSelect = document.getElementById('interval-select');
+
+let currentSymbol = null;
+let refreshTimer = null;
+
+function iconUrl(icon) {
+  return 'https://cdn.jsdelivr.net/gh/spothq/cryptocurrency-icons@master/128/color/' + icon + '.png';
+}
+
+async function loadCoinList() {
+  listView.innerHTML = '<p style="text-align:center;color:#848e9c;padding:20px;">Loading...</p>';
+  try {
+    const symbolsParam = encodeURIComponent(JSON.stringify(coinList.map(c => c.symbol)));
+    const res = await fetch('https://api.binance.com/api/v3/ticker/24hr?symbols=' + symbolsParam);
+    const tickers = await res.json();
+    listView.innerHTML = '';
+
+    coinList.forEach(coin => {
+      const t = tickers.find(x => x.symbol === coin.symbol);
+      if (!t) return;
+      const changePercent = parseFloat(t.priceChangePercent);
+      const up = changePercent >= 0;
+      const price = parseFloat(t.lastPrice);
+
+      const row = document.createElement('div');
+      row.className = 'coin-row';
+      row.innerHTML = `
+        <div class="coin-left">
+          <img src="${iconUrl(coin.icon)}" onerror="this.style.visibility='hidden'">
+          <div>
+            <div class="coin-name">${coin.short}/USDT</div>
+            <div class="coin-sub">${coin.name}</div>
           </div>
-
-          <div class="duration-return">
-            ${d.returnPct.toFixed(0)}%
-          </div>
-        `;
-
-
-        box.addEventListener('click', () => {
-
-          document
-            .querySelectorAll('.duration-box')
-            .forEach((b) => {
-
-              b.classList.remove('selected');
-
-            });
-
-
-          box.classList.add('selected');
-
-
-          selectedDuration = d;
-
-
-          console.log(
-            'Selected duration:',
-            selectedDuration
-          );
-
-        });
-
-
-        row.appendChild(box);
-
-      });
-
-    }
-
-
-    /* =========================
-       API HELPER
-    ========================== */
-
-    const API_BASES = [
-      'https://api.binance.com',
-      'https://api1.binance.com',
-      'https://api2.binance.com',
-      'https://api3.binance.com'
-    ];
-
-    async function fetchJson(path) {
-      let lastError = null;
-
-      for (const base of API_BASES) {
-        try {
-          const response = await fetch(base + path, {
-            method: 'GET',
-            cache: 'no-store'
-          });
-
-          if (!response.ok) {
-            throw new Error(`HTTP ${response.status}`);
-          }
-
-          return await response.json();
-        } catch (error) {
-          lastError = error;
-        }
-      }
-
-      throw lastError || new Error('Unable to connect to Binance');
-    }
-
-
-    /* =========================
-       LOAD COIN LIST
-    ========================== */
-
-    async function loadCoinList() {
-
-      listView.innerHTML = `
-        <p
-          style="
-            text-align:center;
-            color:#848e9c;
-            padding:20px;
-          "
-        >
-          Loading...
-        </p>
-      `;
-
-
-      try {
-
-        const symbolsParam =
-          encodeURIComponent(
-            JSON.stringify(
-              coinList.map(
-                c => c.symbol
-              )
-            )
-          );
-
-
-        const tickers = await fetchJson(
-          '/api/v3/ticker/24hr?symbols=' + symbolsParam
-        );
-
-
-        listView.innerHTML = '';
-
-
-        coinList.forEach((coin) => {
-
-          const t =
-            tickers.find(
-              x => x.symbol === coin.symbol
-            );
-
-
-          if (!t) return;
-
-
-          const changePercent =
-            parseFloat(
-              t.priceChangePercent
-            );
-
-
-          const up =
-            changePercent >= 0;
-
-
-          const price =
-            parseFloat(
-              t.lastPrice
-            );
-
-
-          const row =
-            document.createElement('div');
-
-
-          row.className =
-            'coin-row';
-
-
-          row.innerHTML = `
-
-            <div class="coin-left">
-
-              <img
-                src="${iconUrl(coin.icon)}"
-                alt="${coin.name}"
-                onerror="this.style.visibility='hidden'"
-              >
-
-              <div>
-
-                <div class="coin-name">
-                  ${coin.short}/USDT
-                </div>
-
-                <div class="coin-sub">
-                  ${coin.name}
-                </div>
-
-              </div>
-
-            </div>
-
-
-            <div class="coin-right">
-
-              <div class="coin-price">
-                $${price.toLocaleString(
-                  undefined,
-                  {
-                    maximumFractionDigits: 4
-                  }
-                )}
-              </div>
-
-              <div
-                class="${up ? 'change-up' : 'change-down'}"
-              >
-                ${up ? '+' : ''}
-                ${changePercent.toFixed(2)}%
-              </div>
-
-            </div>
-
-          `;
-
-
-          row.addEventListener(
-            'click',
-            () => openChart(coin)
-          );
-
-
-          listView.appendChild(row);
-
-        });
-
-      }
-
-      catch (err) {
-
-        console.error(err);
-
-
-        listView.innerHTML = `
-          <p
-            style="
-              text-align:center;
-              color:#f6465d;
-              padding:20px;
-            "
-          >
-            Could not load coin list.
-          </p>
-        `;
-
-      }
-
-    }
-
-
-    /* =========================
-       OPEN CHART
-    ========================== */
-
-    function openChart(coin) {
-
-      currentSymbol = coin;
-
-
-      listView.style.display =
-        'none';
-
-
-      chartView.style.display =
-        'block';
-
-
-      backBtn.style.display =
-        'block';
-
-
-      pageTitle.textContent =
-        coin.short + '/USDT';
-
-
-      document.getElementById(
-        'chart-icon'
-      ).src =
-        iconUrl(coin.icon);
-
-
-      document.getElementById(
-        'chart-pair'
-      ).textContent =
-        coin.short + '/USDT';
-
-
-      renderDurationBoxes();
-
-
-      loadChart();
-
-
-      clearInterval(refreshTimer);
-
-
-      refreshTimer =
-        setInterval(
-          loadChart,
-          15000
-        );
-
-    }
-
-
-    /* =========================
-       BACK BUTTON
-    ========================== */
-
-    backBtn.addEventListener(
-      'click',
-      () => {
-
-        clearInterval(
-          refreshTimer
-        );
-
-
-        chartView.style.display =
-          'none';
-
-
-        listView.style.display =
-          'block';
-
-
-        backBtn.style.display =
-          'none';
-
-
-        pageTitle.textContent =
-          'Smart Trading';
-
-      }
-    );
-
-
-    /* =========================
-       INTERVAL CHANGE
-    ========================== */
-
-    intervalSelect.addEventListener(
-      'change',
-      () => {
-
-        if (currentSymbol) {
-
-          loadChart();
-
-        }
-
-      }
-    );
-
-
-    /* =========================
-       DRAW CANDLES
-    ========================== */
-
-    function drawCandles(
-      canvas,
-      klines
-    ) {
-
-      const ctx =
-        canvas.getContext('2d');
-
-
-      const w =
-        canvas.width;
-
-
-      const h =
-        canvas.height;
-
-
-      ctx.clearRect(
-        0,
-        0,
-        w,
-        h
-      );
-
-
-      const highs =
-        klines.map(
-          k => parseFloat(k[2])
-        );
-
-
-      const lows =
-        klines.map(
-          k => parseFloat(k[3])
-        );
-
-
-      const max =
-        Math.max(...highs);
-
-
-      const min =
-        Math.min(...lows);
-
-
-      const range =
-        (max - min) || 1;
-
-
-      const candleWidth =
-        w / klines.length;
-
-
-      klines.forEach(
-        (k, i) => {
-
-          const open =
-            parseFloat(k[1]);
-
-
-          const high =
-            parseFloat(k[2]);
-
-
-          const low =
-            parseFloat(k[3]);
-
-
-          const close =
-            parseFloat(k[4]);
-
-
-          const up =
-            close >= open;
-
-
-          const color =
-            up
-              ? '#0ecb81'
-              : '#f6465d';
-
-
-          const x =
-            i * candleWidth
-            + candleWidth / 2;
-
-
-          const yHigh =
-            h -
-            ((high - min) / range) * h;
-
-
-          const yLow =
-            h -
-            ((low - min) / range) * h;
-
-
-          const yOpen =
-            h -
-            ((open - min) / range) * h;
-
-
-          const yClose =
-            h -
-            ((close - min) / range) * h;
-
-
-          /* WICK */
-
-          ctx.strokeStyle =
-            color;
-
-
-          ctx.lineWidth = 1;
-
-
-          ctx.beginPath();
-
-          ctx.moveTo(
-            x,
-            yHigh
-          );
-
-          ctx.lineTo(
-            x,
-            yLow
-          );
-
-          ctx.stroke();
-
-
-          /* BODY */
-
-          ctx.fillStyle =
-            color;
-
-
-          const bodyTop =
-            Math.min(
-              yOpen,
-              yClose
-            );
-
-
-          const bodyHeight =
-            Math.max(
-              Math.abs(
-                yClose - yOpen
-              ),
-              1
-            );
-
-
-          ctx.fillRect(
-            x - candleWidth * 0.35,
-            bodyTop,
-            candleWidth * 0.7,
-            bodyHeight
-          );
-
-        }
-      );
-
-    }
-
-
-    /* =========================
-       DRAW VOLUME
-    ========================== */
-
-    function drawVolume(
-      canvas,
-      klines
-    ) {
-
-      const ctx =
-        canvas.getContext('2d');
-
-
-      const w =
-        canvas.width;
-
-
-      const h =
-        canvas.height;
-
-
-      ctx.clearRect(
-        0,
-        0,
-        w,
-        h
-      );
-
-
-      const volumes =
-        klines.map(
-          k => parseFloat(k[5])
-        );
-
-
-      const maxVol =
-        Math.max(...volumes) || 1;
-
-
-      const barWidth =
-        w / klines.length;
-
-
-      klines.forEach(
-        (k, i) => {
-
-          const open =
-            parseFloat(k[1]);
-
-
-          const close =
-            parseFloat(k[4]);
-
-
-          const up =
-            close >= open;
-
-
-          const vol =
-            parseFloat(k[5]);
-
-
-          const barHeight =
-            (vol / maxVol) * h;
-
-
-          const x =
-            i * barWidth;
-
-
-          ctx.fillStyle =
-            up
-              ? 'rgba(14,203,129,0.6)'
-              : 'rgba(246,70,93,0.6)';
-
-
-          ctx.fillRect(
-            x + barWidth * 0.15,
-            h - barHeight,
-            barWidth * 0.7,
-            barHeight
-          );
-
-        }
-      );
-
-    }
-
-
-    /* =========================
-       LOAD CHART DATA
-    ========================== */
-
-    async function loadChart() {
-
-      if (!currentSymbol) return;
-
-
-      try {
-
-        const interval =
-          intervalSelect.value;
-
-
-        const klines = await fetchJson(
-          `/api/v3/klines?symbol=${currentSymbol.symbol}&interval=${interval}&limit=48`
-        );
-
-
-        if (
-          !klines ||
-          klines.length === 0
-        ) {
-
-          return;
-
-        }
-
-
-        /* CANDLES */
-
-        drawCandles(
-          document.getElementById(
-            'candles'
-          ),
-          klines
-        );
-
-
-        /* VOLUME */
-
-        drawVolume(
-          document.getElementById(
-            'volume'
-          ),
-          klines
-        );
-
-
-        /* LAST CANDLE */
-
-        const last =
-          klines[
-            klines.length - 1
-          ];
-
-
-        const previous =
-          klines[
-            klines.length - 2
-          ] || last;
-
-
-        const openVal =
-          parseFloat(last[1]);
-
-
-        const highVal =
-          parseFloat(last[2]);
-
-
-        const lowVal =
-          parseFloat(last[3]);
-
-
-        const closeVal =
-          parseFloat(last[4]);
-
-
-        const prevClose =
-          parseFloat(previous[4]);
-
-
-        const changePercent =
-          prevClose
-            ? ((closeVal - prevClose) / prevClose) * 100
-            : 0;
-
-
-        const up =
-          changePercent >= 0;
-
-
-        /* PRICE */
-
-        document.getElementById(
-          'live-price'
-        ).textContent =
-          closeVal.toLocaleString(
-            undefined,
-            {
-              maximumFractionDigits: 4
-            }
-          ) + ' USD';
-
-
-        /* CHANGE */
-
-        const changeEl =
-          document.getElementById(
-            'live-change'
-          );
-
-
-        changeEl.textContent =
-          (up ? '+' : '')
-          + changePercent.toFixed(2)
-          + '%';
-
-
-        changeEl.className =
-          up
-            ? 'change-up'
-            : 'change-down';
-
-
-        /* OHLC */
-
-        document.getElementById(
-          'ohlc-open'
-        ).textContent =
-          openVal.toLocaleString(
-            undefined,
-            {
-              maximumFractionDigits: 2
-            }
-          );
-
-
-        document.getElementById(
-          'ohlc-high'
-        ).textContent =
-          highVal.toLocaleString(
-            undefined,
-            {
-              maximumFractionDigits: 2
-            }
-          );
-
-
-        document.getElementById(
-          'ohlc-low'
-        ).textContent =
-          lowVal.toLocaleString(
-            undefined,
-            {
-              maximumFractionDigits: 2
-            }
-          );
-
-
-        document.getElementById(
-          'ohlc-close'
-        ).textContent =
-          closeVal.toLocaleString(
-            undefined,
-            {
-              maximumFractionDigits: 2
-            }
-          );
-
-
-        /* TIME */
-
-        const startTime =
-          new Date(
-            klines[0][0]
-          );
-
-
-        const endTime =
-          new Date(
-            last[0]
-          );
-
-
-        document.getElementById(
-          'time-labels'
-        ).innerHTML = `
-
-          <span>
-            ${startTime.toLocaleString()}
-          </span>
-
-          <span>
-            ${endTime.toLocaleString()}
-          </span>
-
-        `;
-
-      }
-
-      catch (err) {
-
-        console.error('Chart error:', err);
-
-        document.getElementById('live-price').textContent = 'Unavailable';
-        document.getElementById('live-change').textContent = 'API error';
-        document.getElementById('live-change').className = 'change-down';
-
-      }
-
-    }
-
-
-    /* =========================
-       START
-    ========================== */
-
-    loadCoinList();
-
-  </script>
-
+        </div>
+        <div class="coin-right">
+          <div class="coin-price">$${price.toLocaleString(undefined,{maximumFractionDigits:4})}</div>
+          <div class="${up?'change-up':'change-down'}">${up?'+':''}${changePercent.toFixed(2)}%</div>
+        </div>`;
+      row.addEventListener('click', () => openChart(coin));
+      listView.appendChild(row);
+    });
+  } catch (err) {
+    listView.innerHTML = '<p style="text-align:center;color:#f6465d;padding:20px;">Could not load coin list.</p>';
+  }
+}
+
+function openChart(coin) {
+  currentSymbol = coin;
+  listView.style.display = 'none';
+  chartView.style.display = 'block';
+  backBtn.style.display = 'block';
+  pageTitle.textContent = coin.short + '/USDT';
+  document.getElementById('chart-icon').src = iconUrl(coin.icon);
+  document.getElementById('chart-pair').textContent = coin.short + '/USDT';
+  renderDurationBoxes();
+  loadChart();
+  clearInterval(refreshTimer);
+  refreshTimer = setInterval(loadChart, 15000);
+}
+
+backBtn.addEventListener('click', () => {
+  clearInterval(refreshTimer);
+  chartView.style.display = 'none';
+  listView.style.display = 'block';
+  backBtn.style.display = 'none';
+  pageTitle.textContent = 'Smart Trading';
+});
+
+intervalSelect.addEventListener('change', () => {
+  if (currentSymbol) loadChart();
+});
+
+function drawCandles(canvas, klines) {
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width, h = canvas.height;
+  ctx.clearRect(0,0,w,h);
+
+  const highs = klines.map(k => parseFloat(k[2]));
+  const lows = klines.map(k => parseFloat(k[3]));
+  const max = Math.max(...highs);
+  const min = Math.min(...lows);
+  const range = (max - min) || 1;
+  const candleWidth = w / klines.length;
+
+  klines.forEach((k, i) => {
+    const open = parseFloat(k[1]);
+    const high = parseFloat(k[2]);
+    const low = parseFloat(k[3]);
+    const close = parseFloat(k[4]);
+    const up = close >= open;
+    const color = up ? '#0ecb81' : '#f6465d';
+    const x = i * candleWidth + candleWidth/2;
+
+    const yHigh = h - ((high - min)/range) * h;
+    const yLow = h - ((low - min)/range) * h;
+    const yOpen = h - ((open - min)/range) * h;
+    const yClose = h - ((close - min)/range) * h;
+
+    ctx.strokeStyle = color;
+    ctx.beginPath();
+    ctx.moveTo(x, yHigh);
+    ctx.lineTo(x, yLow);
+    ctx.stroke();
+
+    ctx.fillStyle = color;
+    const bodyTop = Math.min(yOpen, yClose);
+    const bodyHeight = Math.max(Math.abs(yClose - yOpen), 1);
+    ctx.fillRect(x - candleWidth*0.35, bodyTop, candleWidth*0.7, bodyHeight);
+  });
+}
+
+function drawVolume(canvas, klines) {
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width, h = canvas.height;
+  ctx.clearRect(0,0,w,h);
+  const volumes = klines.map(k => parseFloat(k[5]));
+  const maxVol = Math.max(...volumes) || 1;
+  const barWidth = w / klines.length;
+
+  klines.forEach((k, i) => {
+    const open = parseFloat(k[1]);
+    const close = parseFloat(k[4]);
+    const up = close >= open;
+    const vol = parseFloat(k[5]);
+    const barHeight = (vol / maxVol) * h;
+    const x = i * barWidth;
+    ctx.fillStyle = up ? 'rgba(14,203,129,0.6)' : 'rgba(246,70,93,0.6)';
+    ctx.fillRect(x + barWidth*0.15, h - barHeight, barWidth*0.7, barHeight);
+  });
+}
+
+async function loadChart() {
+  if (!currentSymbol) return;
+  try {
+    const interval = intervalSelect.value;
+    const res = await fetch(`https://api.binance.com/api/v3/klines?symbol=${currentSymbol.symbol}&interval=${interval}&limit=48`);
+    const klines = await res.json();
+    if (!klines || klines.length === 0) return;
+
+    drawCandles(document.getElementById('candles'), klines);
+    drawVolume(document.getElementById('volume'), klines);
+
+    const last = klines[klines.length - 1];
+    const first = klines[0];
+    const openVal = parseFloat(last[1]);
+    const highVal = parseFloat(last[2]);
+    const lowVal = parseFloat(last[3]);
+    const closeVal = parseFloat(last[4]);
+    const prevClose = parseFloat(klines[klines.length - 2] ? klines[klines.length - 2][4] : first[1]);
+    const changePercent = ((closeVal - prevClose) / prevClose) * 100;
+    const up = changePercent >= 0;
+
+    document.getElementById('live-price').textContent = closeVal.toLocaleString(undefined,{maximumFractionDigits:4}) + ' USD';
+    const changeEl = document.getElementById('live-change');
+    changeEl.textContent = (up?'+':'') + changePercent.toFixed(2) + '%';
+    changeEl.className = up ? 'change-up' : 'change-down';
+    document.getElementById('ohlc-open').textContent = openVal.toLocaleString(undefined,{maximumFractionDigits:2});
+    document.getElementById('ohlc-high').textContent = highVal.toLocaleString(undefined,{maximumFractionDigits:2});
+    document.getElementById('ohlc-low').textContent = lowVal.toLocaleString(undefined,{maximumFractionDigits:2});
+    document.getElementById('ohlc-close').textContent = closeVal.toLocaleString(undefined,{maximumFractionDigits:2});
+
+    const startTime = new Date(first[0]);
+    const endTime = new Date(last[0]);
+    document.getElementById('time-labels').innerHTML =
+      `<span>${startTime.toLocaleString()}</span><span>${endTime.toLocaleString()}</span>`;
+  } catch (err) {
+    console.error(err);
+  }
+}
+
+loadCoinList();
+</script>
 </body>
 </html>
