@@ -9,6 +9,26 @@
   body { margin:0; font-family:Arial, sans-serif; background:#0b0e11; color:#eaecef; padding-bottom:70px; }
   header { padding:16px 20px; text-align:center; }
   header h1 { font-size:20px; margin:0; color:#f0b90b; }
+
+  .balance-card {
+    background:#161a1e; border-radius:12px; margin:16px; padding:20px;
+  }
+  .balance-title {
+    display:flex; align-items:center; gap:6px;
+    color:#848e9c; font-size:14px; margin-bottom:16px;
+  }
+  .balance-amount {
+    display:flex; align-items:baseline; gap:8px; margin-bottom:6px;
+  }
+  .balance-amount .num { font-size:32px; font-weight:bold; }
+  .balance-amount .cur { color:#848e9c; font-size:15px; }
+  .balance-usd { color:#848e9c; font-size:13px; margin-bottom:20px; }
+  .balance-actions { display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; }
+  .balance-actions button {
+    background:#1e2329; border:1px solid #2b3139; color:#eaecef;
+    padding:12px 0; border-radius:8px; font-weight:bold; font-size:14px; cursor:pointer;
+  }
+
   .card { background:#161a1e; border-radius:12px; margin:16px; padding:20px; }
   .row { display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid #1e2329; }
   .row:last-child { border-bottom:none; }
@@ -18,18 +38,7 @@
     width:calc(100% - 32px); margin:16px; padding:14px; border:none; border-radius:8px;
     background:#f6465d; color:white; font-weight:bold; cursor:pointer;
   }
-  .icon-boxes {
-    display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px;
-    margin:16px;
-  }
-  .icon-box {
-    background:#161a1e; border-radius:12px; height:100px;
-    display:flex; align-items:center; justify-content:center;
-    cursor:pointer;
-  }
-  .icon-box img {
-    max-width:70%; max-height:70%; object-fit:contain;
-  }
+
   .bottom-nav {
     position:fixed; bottom:0; left:0; right:0; background:#161a1e;
     display:flex; justify-content:space-around; padding:10px 0;
@@ -49,16 +58,31 @@
 </head>
 <body>
 <header><h1>Profile</h1></header>
+
+<div class="balance-card">
+  <div class="balance-title">
+    Est. Total Value
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/>
+      <circle cx="12" cy="12" r="3"/>
+    </svg>
+  </div>
+  <div class="balance-amount">
+    <span class="num">0.00</span>
+    <span class="cur">USDT &#9662;</span>
+  </div>
+  <div class="balance-usd">&#8776; $0.00</div>
+  <div class="balance-actions">
+    <button onclick="">Deposit</button>
+    <button onclick="">Withdraw</button>
+    <button onclick="">Transfer</button>
+  </div>
+</div>
+
 <div class="card" id="profile-card">
   <div class="row"><span class="label">Loading...</span></div>
 </div>
 <button class="logout-btn" onclick="firebase.auth().signOut().then(()=>window.location.href='index.html')">Log Out</button>
-
-<div class="icon-boxes">
-  <div class="icon-box" id="icon-box-1"><img src="" alt="" style="display:none;"></div>
-  <div class="icon-box" id="icon-box-2"><img src="" alt="" style="display:none;"></div>
-  <div class="icon-box" id="icon-box-3"><img src="" alt="" style="display:none;"></div>
-</div>
 
 <div class="bottom-nav">
   <a href="market.html" style="text-decoration:none;"><div><div class="ic">&#128200;</div>Market</div></a>
