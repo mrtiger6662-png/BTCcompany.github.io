@@ -86,6 +86,8 @@ document.querySelectorAll('.tabs button').forEach(btn => {
     btn.classList.add('active');
     if (btn.dataset.tab === 'crypto' || btn.dataset.tab === 'futures') {
       loadMarket();
+    } else if (btn.dataset.tab === 'forex') {
+      loadForex();
     } else {
       document.getElementById('market-body').innerHTML =
         '<tr><td colspan="3" style="text-align:center; color:#848e9c; padding:30px;">Coming soon</td></tr>';
@@ -192,6 +194,81 @@ async function loadMarket() {
         })
         .catch(() => {});
     }
+  } catch (err) {
+    tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color:#f6465d;">Error: ' + err.message + '</td></tr>';
+  }
+}
+
+const forexList = [
+  { pair: 'EUR/USD', flag: '🇪🇺', base: 'EUR', quote: 'USD' },
+  { pair: 'USD/HKD', flag: '🇺🇸', base: 'USD', quote: 'HKD' },
+  { pair: 'GBP/USD', flag: '🇬🇧', base: 'GBP', quote: 'USD' },
+  { pair: 'USD/CNY', flag: '🇺🇸', base: 'USD', quote: 'CNY' },
+  { pair: 'USD/JPY', flag: '🇺🇸', base: 'USD', quote: 'JPY' },
+  { pair: 'USD/CHF', flag: '🇺🇸', base: 'USD', quote: 'CHF' },
+  { pair: 'USD/SGD', flag: '🇺🇸', base: 'USD', quote: 'SGD' },
+  { pair: 'USD/CAD', flag: '🇺🇸', base: 'USD', quote: 'CAD' },
+  { pair: 'AUD/USD', flag: '🇦🇺', base: 'AUD', quote: 'USD' },
+  { pair: 'USD/INR', flag: '🇺🇸', base: 'USD', quote: 'INR' }
+];
+
+async function loadForex() {
+  const tbody = document.getElementById('market-body');
+  const highlightRow = document.getElementById('highlight-row');
+  tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color:#848e9c;">Loading...</td></tr>';
+  try {
+    const today = new Date();
+    const past = new Date();
+    past.setDate(past.getDate() - 9);
+    const fmt = d => d.toISOString().split('T')[0];
+    const start = fmt(past), end = fmt(today);
+
+    const bases = [...new Set(forexList.map(f => f.base))];
+    const seriesByBase = {};
+    for (const base of bases) {
+      const targets = forexList.filter(f => f.base === base).map(f => f.quote).join(',');
+      const res = await fetch(`https://api.frankfurter.app/${start}..${end}?from=${base}&to=${targets}`);
+      const data = await res.json();
+      seriesByBase[base] = data.rates;
+    }
+
+    tbody.innerHTML = '';
+    highlightRow.innerHTML = '';
+
+    forexList.forEach((fx, idx) => {
+      const series = seriesByBase[fx.base];
+      const dates = Object.keys(series).sort();
+      const values = dates.map(d => series[d][fx.quote]);
+      const latest = values[values.length - 1];
+      const prevDay = values[values.length - 2] ?? latest;
+      const changePercent = ((latest - prevDay) / prevDay) * 100;
+      const up = changePercent >= 0;
+
+      if (idx < 3) {
+        const hCard = document.createElement('div');
+        hCard.className = 'highlight-card';
+        hCard.innerHTML = `<div class="name">${fx.flag} ${fx.pair}</div><div class="price ${up?'change-up':'change-down'}">${latest.toLocaleString(undefined,{maximumFractionDigits:4})}</div>`;
+        highlightRow.appendChild(hCard);
+      }
+
+      const row = document.createElement('tr');
+      row.innerHTML = `
+        <td>
+          <div class="coin-name">
+            <span style="font-size:20px;">${fx.flag}</span>
+            <div>${fx.pair}<div class="coin-sub">${fx.base}/${fx.quote}</div></div>
+          </div>
+        </td>
+        <td><canvas width="70" height="30" id="chart-fx-${fx.pair.replace('/','')}"></canvas></td>
+        <td>
+          <div class="${up?'change-up':'change-down'}">${up?'+':''}${changePercent.toFixed(2)}%</div>
+          <div>${latest.toLocaleString(undefined,{maximumFractionDigits:4})}</div>
+        </td>`;
+      tbody.appendChild(row);
+
+      const canvas = document.getElementById('chart-fx-' + fx.pair.replace('/',''));
+      if (canvas) drawSparkline(canvas, values, up);
+    });
   } catch (err) {
     tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color:#f6465d;">Error: ' + err.message + '</td></tr>';
   }
