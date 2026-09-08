@@ -100,7 +100,7 @@
 <body>
 <header>
     <div class="logo">ABC Company</div>
-    <div class="nav-right">
+    <div class="nav-right" id="nav-right">
         <a href="login.html" style="text-decoration:none;"><button class="btn-outline">Log In</button></a>
         <a href="signup.html" style="text-decoration:none;"><button class="btn-gold">Sign Up</button></a>
     </div>
@@ -219,6 +219,35 @@ async function loadCrypto() {
 }
 loadCrypto();
 setInterval(loadCrypto, 60000);
+</script>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyDJoPr8RvE1xkNTKRr5kwTx6E51GCMn_HE",
+  authDomain: "abc-company-6272a.firebaseapp.com",
+  projectId: "abc-company-6272a",
+  storageBucket: "abc-company-6272a.firebasestorage.app",
+  messagingSenderId: "1026212780106",
+  appId: "1:1026212780106:web:985ec1bc35837d6320eeb3"
+};
+firebase.initializeApp(firebaseConfig);
+
+firebase.auth().onAuthStateChanged(user => {
+  const navRight = document.getElementById('nav-right');
+  if (user) {
+    navRight.innerHTML = `
+      <a href="market.html" style="text-decoration:none;"><button class="btn-outline">Market</button></a>
+      <button class="btn-gold" onclick="firebase.auth().signOut().then(()=>location.reload())">Log Out</button>
+    `;
+  } else {
+    navRight.innerHTML = `
+      <a href="login.html" style="text-decoration:none;"><button class="btn-outline">Log In</button></a>
+      <a href="signup.html" style="text-decoration:none;"><button class="btn-gold">Sign Up</button></a>
+    `;
+  }
+});
 </script>
 
 </body>
