@@ -79,15 +79,18 @@
 </div>
 
 <script>
+let currentTab = 'crypto';
+
 document.querySelectorAll('.tabs button').forEach(btn => {
   btn.addEventListener('click', () => {
     document.querySelectorAll('.tabs button').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
-    if (btn.dataset.tab === 'crypto' || btn.dataset.tab === 'futures') {
+    currentTab = btn.dataset.tab;
+    if (currentTab === 'crypto' || currentTab === 'futures') {
       loadMarket();
-    } else if (btn.dataset.tab === 'forex') {
+    } else if (currentTab === 'forex') {
       loadForex();
-    } else if (btn.dataset.tab === 'stocks') {
+    } else if (currentTab === 'stocks') {
       loadStocks();
     }
   });
@@ -406,7 +409,15 @@ async function loadStocks() {
 }
 
 loadMarket();
-setInterval(loadMarket, 60000);
+setInterval(() => {
+  if (currentTab === 'crypto' || currentTab === 'futures') {
+    loadMarket();
+  } else if (currentTab === 'forex') {
+    loadForex();
+  } else if (currentTab === 'stocks') {
+    loadStocks();
+  }
+}, 60000);
 </script>
 
 </body>
