@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Profile - ABC Company</title>
+<style>
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:Arial, sans-serif; background:#0b0e11; color:#eaecef; padding-bottom:70px; }
+  header { padding:16px 20px; text-align:center; }
+  header h1 { font-size:20px; margin:0; color:#f0b90b; }
+  .card { background:#161a1e; border-radius:12px; margin:16px; padding:20px; }
+  .row { display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid #1e2329; }
+  .row:last-child { border-bottom:none; }
+  .label { color:#848e9c; font-size:13px; }
+  .value { font-weight:bold; word-break:break-all; text-align:right; max-width:60%; }
+  .logout-btn {
+    width:calc(100% - 32px); margin:16px; padding:14px; border:none; border-radius:8px;
+    background:#f6465d; color:white; font-weight:bold; cursor:pointer;
+  }
+  .bottom-nav {
+    position:fixed; bottom:0; left:0; right:0; background:#161a1e;
+    display:flex; justify-content:space-around; padding:10px 0;
+    border-top:1px solid #2b3139;
+  }
+  .bottom-nav div { text-align:center; color:#848e9c; font-size:11px; cursor:pointer; }
+  .bottom-nav div.active { color:#f0b90b; }
+  .bottom-nav .ic {
+    font-size:18px; width:38px; height:38px; line-height:38px;
+    margin:0 auto 2px; border-radius:50%; transition:0.2s;
+  }
+  .bottom-nav div.active .ic {
+    background:rgba(240,185,11,0.15);
+    box-shadow:0 0 0 6px rgba(240,185,11,0.08);
+  }
+</style>
+</head>
+<body>
+
+<header><h1>Profile</h1></header>
+
+<div class="card" id="profile-card">
+  <div class="row"><span class="label">Loading...</span></div>
+</div>
+
+<button class="logout-btn" onclick="firebase.auth().signOut().then(()=>window.location.href='index.html')">Log Out</button>
+
+<div class="bottom-nav">
+  <a href="market.html" style="text-decoration:none;"><div><div class="ic">&#128200;</div>Market</div></a>
+  <a href="trade.html" style="text-decoration:none;"><div><div class="ic">&#128179;</div>Trade</div></a>
+  <div><div class="ic">&#128188;</div>Assets</div>
+  <div class="active"><div class="ic">&#128100;</div>Profile</div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyDJoPr8RvE1xkNTKRr5kwTx6E51GCMn_HE",
+  authDomain: "abc-company-6272a.firebaseapp.com",
+  projectId: "abc-company-6272a",
+  storageBucket: "abc-company-6272a.firebasestorage.app",
+  messagingSenderId: "1026212780106",
+  appId: "1:1026212780106:web:985ec1bc35837d6320eeb3"
+};
+firebase.initializeApp(firebaseConfig);
+
+firebase.auth().onAuthStateChanged(async user => {
+  if (!user) {
+    window.location.href = 'login.html';
+    return;
+  }
+  const card = document.getElementById('profile-card');
+  let identifier = user.email;
+  let createdAtStr = '-';
+  try {
+    const doc = await firebase.firestore().collection('users').doc(user.uid).get();
+    if (doc.exists) {
+      const data = doc.data();
+      identifier = data.identifier || user.email;
+      if (data.createdAt) createdAtStr = data.createdAt.toDate().toLocaleString();
+    }
+  } catch (e) {}
+
+  card.innerHTML = `
+    <div class="row"><span class="label">Email/Phone</span><span class="value">${identifier}</span></div>
+    <div class="row"><span class="label">UID</span><span class="value">${user.uid}</span></div>
+    <div class="row"><span class="label">Joined</span><span class="value">${createdAtStr}</span></div>
+  `;
+});
+</script>
+</body>
+</html>
