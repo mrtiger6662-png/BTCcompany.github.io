@@ -3,24 +3,27 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Admin - Deposit Requests</title>
+<title>Admin - Requests</title>
 <style>
   * { box-sizing:border-box; }
   body { margin:0; font-family:Arial, sans-serif; background:#0b0e11; color:#eaecef; padding-bottom:40px; }
   header { padding:16px 20px; text-align:center; }
   header h1 { font-size:18px; margin:0; color:#f0b90b; }
   #access-denied { text-align:center; padding:40px 20px; color:#f6465d; }
+  .section-title { padding:20px 16px 10px; font-size:16px; font-weight:bold; color:#f0b90b; }
   .list { padding:0 16px; }
   .req-card { background:#161a1e; border-radius:12px; padding:16px; margin-bottom:14px; }
   .req-top { display:flex; justify-content:space-between; font-size:13px; color:#848e9c; margin-bottom:8px; }
   .req-amount { font-size:18px; font-weight:bold; color:#f0b90b; margin-bottom:10px; }
   .req-card img.proof { width:100%; max-height:260px; object-fit:contain; border-radius:8px; background:#000; margin-bottom:12px; cursor:pointer; }
+  .req-detail { font-size:13px; color:#848e9c; margin-bottom:4px; word-break:break-all; }
+  .req-detail b { color:#eaecef; }
   .credit-row { display:flex; gap:8px; margin-bottom:10px; }
   .credit-row input {
     flex:1; background:#1e2329; border:1px solid #2b3139; color:#eaecef;
     padding:10px; border-radius:8px; font-size:14px;
   }
-  .action-row { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .action-row { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:10px; }
   .accept-btn, .reject-btn { padding:12px; border-radius:8px; font-weight:bold; cursor:pointer; border:none; }
   .accept-btn { background:#0ecb81; color:#0b0e11; }
   .reject-btn { background:#f6465d; color:#fff; }
@@ -32,10 +35,17 @@
 </head>
 <body>
 
-<header><h1>Deposit Requests (Admin)</h1></header>
+<header><h1>Requests (Admin)</h1></header>
 
 <div id="access-denied" style="display:none;">You do not have access to this page.</div>
-<div class="list" id="req-list"></div>
+
+<div id="main-content" style="display:none;">
+  <div class="section-title">Deposit Requests</div>
+  <div class="list" id="deposit-list"></div>
+
+  <div class="section-title">Withdrawal Requests</div>
+  <div class="list" id="withdrawal-list"></div>
+</div>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
@@ -59,16 +69,17 @@ firebase.auth().onAuthStateChanged(user => {
     document.getElementById('access-denied').style.display = 'block';
     return;
   }
+  document.getElementById('main-content').style.display = 'block';
   loadDeposits();
+  loadWithdrawals();
 });
 
+// ---------- Deposits ----------
 async function loadDeposits() {
-  const listEl = document.getElementById('req-list');
+  const listEl = document.getElementById('deposit-list');
   listEl.innerHTML = '<p class="empty-msg">Loading...</p>';
 
-  const snapshot = await firebase.firestore().collection('deposits')
-    .orderBy('createdAt', 'desc').get();
-
+  const snapshot = await firebase.firestore().collection('deposits').orderBy('createdAt', 'desc').get();
   if (snapshot.empty) {
     listEl.innerHTML = '<p class="empty-msg">No deposit requests yet.</p>';
     return;
@@ -88,7 +99,7 @@ async function loadDeposits() {
         </div>
         <div class="action-row">
           <button class="accept-btn" data-id="${doc.id}" data-uid="${d.uid}">Accept</button>
-          <button class="reject-btn" data-id="${doc.id}">Reject</button>
+          <button class="reject-btn" data-id="${doc.id}" data-type="deposit">Reject</button>
         </div>`;
     } else {
       const cls = d.status === 'approved' ? 'approved' : 'rejected';
@@ -108,10 +119,10 @@ async function loadDeposits() {
     listEl.appendChild(card);
   });
 
-  document.querySelectorAll('.accept-btn').forEach(btn => {
+  document.querySelectorAll('#deposit-list .accept-btn').forEach(btn => {
     btn.addEventListener('click', () => acceptDeposit(btn.dataset.id, btn.dataset.uid));
   });
-  document.querySelectorAll('.reject-btn').forEach(btn => {
+  document.querySelectorAll('#deposit-list .reject-btn').forEach(btn => {
     btn.addEventListener('click', () => rejectDeposit(btn.dataset.id));
   });
 }
@@ -123,24 +134,82 @@ async function acceptDeposit(depositId, uid) {
     alert('Please enter a valid USDT amount to credit.');
     return;
   }
-
   await firebase.firestore().collection('deposits').doc(depositId).update({
-    status: 'approved',
-    creditedUSDT: creditVal
+    status: 'approved', creditedUSDT: creditVal
   });
-
   await firebase.firestore().collection('users').doc(uid).set({
     balance: firebase.firestore.FieldValue.increment(creditVal)
   }, { merge: true });
-
   loadDeposits();
 }
 
 async function rejectDeposit(depositId) {
-  await firebase.firestore().collection('deposits').doc(depositId).update({
-    status: 'rejected'
-  });
+  await firebase.firestore().collection('deposits').doc(depositId).update({ status: 'rejected' });
   loadDeposits();
+}
+
+// ---------- Withdrawals ----------
+async function loadWithdrawals() {
+  const listEl = document.getElementById('withdrawal-list');
+  listEl.innerHTML = '<p class="empty-msg">Loading...</p>';
+
+  const snapshot = await firebase.firestore().collection('withdrawals').orderBy('createdAt', 'desc').get();
+  if (snapshot.empty) {
+    listEl.innerHTML = '<p class="empty-msg">No withdrawal requests yet.</p>';
+    return;
+  }
+
+  listEl.innerHTML = '';
+  snapshot.forEach(doc => {
+    const d = doc.data();
+    const card = document.createElement('div');
+    card.className = 'req-card';
+
+    let actionsHtml = '';
+    if (d.status === 'pending') {
+      actionsHtml = `
+        <div class="action-row">
+          <button class="accept-btn" data-id="${doc.id}">Mark Sent</button>
+          <button class="reject-btn" data-id="${doc.id}" data-uid="${d.uid}" data-amount="${d.amount}">Reject & Refund</button>
+        </div>`;
+    } else {
+      const cls = d.status === 'approved' ? 'approved' : 'rejected';
+      actionsHtml = `<span class="status-tag ${cls}">${d.status.toUpperCase()}</span>`;
+    }
+
+    card.innerHTML = `
+      <div class="req-top">
+        <span>${d.userEmail || d.uid}</span>
+        <span>${d.createdAt ? d.createdAt.toDate().toLocaleString() : ''}</span>
+      </div>
+      <div class="req-amount">$${d.amount} (${d.symbol})</div>
+      <div class="req-detail">Fee (2%): <b>$${d.feeAmount.toFixed(2)}</b></div>
+      <div class="req-detail">Net to send: <b>$${d.netAmount.toFixed(2)}</b></div>
+      <div class="req-detail">Address: <b>${d.address}</b></div>
+      ${actionsHtml}
+    `;
+    listEl.appendChild(card);
+  });
+
+  document.querySelectorAll('#withdrawal-list .accept-btn').forEach(btn => {
+    btn.addEventListener('click', () => markWithdrawalSent(btn.dataset.id));
+  });
+  document.querySelectorAll('#withdrawal-list .reject-btn').forEach(btn => {
+    btn.addEventListener('click', () => rejectWithdrawal(btn.dataset.id, btn.dataset.uid, parseFloat(btn.dataset.amount)));
+  });
+}
+
+async function markWithdrawalSent(id) {
+  await firebase.firestore().collection('withdrawals').doc(id).update({ status: 'approved' });
+  loadWithdrawals();
+}
+
+async function rejectWithdrawal(id, uid, amount) {
+  await firebase.firestore().collection('withdrawals').doc(id).update({ status: 'rejected' });
+  await firebase.firestore().collection('users').doc(uid).set({
+    balance: firebase.firestore.FieldValue.increment(amount)
+  }, { merge: true });
+  loadWithdrawals();
 }
 </script>
 </body>
