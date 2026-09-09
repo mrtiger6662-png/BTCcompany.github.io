@@ -76,7 +76,11 @@
   }
   .amt-btn:active { background:#2b3139; }
   .amount-range { text-align:center; font-size:12px; color:#848e9c; margin-top:6px; }
-  .amount-error { text-align:center; font-size:12px; color:#f6465d; margin-top:4px; min-height:14px; }
+  .balance-display {
+  text-align:center; font-size:13px; font-weight:bold; color:#f0b90b;
+  border:1px solid #f0b90b; border-radius:6px; padding:8px 10px;
+  margin-top:8px; background:rgba(240,185,11,0.08);
+}
 
   .direction-row { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:14px; }
   .down-btn, .up-btn {
@@ -161,6 +165,8 @@
       <div class="amount-range" id="amount-range">Amount range: -</div>
       <div class="amount-error" id="amount-error"></div>
 
+      <div class="balance-display" id="balance-display">Est. Total Value: 0.00 USDT</div>
+
       <div class="direction-row">
         <button class="down-btn" id="down-btn">Down</button>
         <button class="up-btn" id="up-btn">UP</button>
@@ -200,6 +206,11 @@ function getBalance() {
   return currentBalance;
 }
 
+function updateBalanceDisplay() {
+  const el = document.getElementById('balance-display');
+  if (el) el.textContent = `Est. Total Value: ${currentBalance.toFixed(2)} USDT`;
+}
+
 // Sets the balance in Firestore to an exact new value.
 // currentBalance itself is updated automatically by the onSnapshot listener below.
 function setBalance(newVal) {
@@ -220,6 +231,7 @@ firebase.auth().onAuthStateChanged(user => {
       if (doc.exists) {
         const data = doc.data();
         currentBalance = data.balance || 0;
+        updateBalanceDisplay();
       }
     });
 });
@@ -296,6 +308,7 @@ function showInvestSection(d) {
   errorEl.textContent = '';
   input.value = '';
   input.placeholder = 'Investment amount';
+  updateBalanceDisplay();
 
   if (d.max === Infinity) {
     rangeText.textContent = `Amount range: ${d.min.toLocaleString()}+ (no upper limit)`;
