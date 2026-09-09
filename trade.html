@@ -155,7 +155,7 @@
     <div class="invest-section" id="invest-section">
       <div class="amount-box">
         <button class="amt-btn" id="amt-minus">&#8722;</button>
-        <input type="number" id="amount-input" placeholder="Investment amount (Virtual $)">
+        <input type="number" id="amount-input" placeholder="Investment amount">
         <button class="amt-btn" id="amt-plus">+</button>
       </div>
       <div class="amount-range" id="amount-range">Amount range: -</div>
@@ -178,7 +178,52 @@
   <a href="profile.html"><div><div class="ic">&#128100;</div>Profile</div></a>
 </div>
 
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script>
+const firebaseConfig = {
+  apiKey: "AIzaSyDJoPr8RvE1xkNTKRr5kwTx6E51GCMn_HE",
+  authDomain: "abc-company-6272a.firebaseapp.com",
+  projectId: "abc-company-6272a",
+  storageBucket: "abc-company-6272a.firebasestorage.app",
+  messagingSenderId: "1026212780106",
+  appId: "1:1026212780106:web:985ec1bc35837d6320eeb3"
+};
+firebase.initializeApp(firebaseConfig);
+
+// ---------- Real balance (Firestore, synced with profile.html) ----------
+let currentUser = null;
+let currentBalance = 0;
+
+function getBalance() {
+  return currentBalance;
+}
+
+// Sets the balance in Firestore to an exact new value.
+// currentBalance itself is updated automatically by the onSnapshot listener below.
+function setBalance(newVal) {
+  if (!currentUser) return;
+  firebase.firestore().collection('users').doc(currentUser.uid).update({
+    balance: newVal
+  }).catch(err => console.error('Balance update failed:', err));
+}
+
+firebase.auth().onAuthStateChanged(user => {
+  if (!user) {
+    window.location.href = 'login.html';
+    return;
+  }
+  currentUser = user;
+  firebase.firestore().collection('users').doc(user.uid)
+    .onSnapshot(doc => {
+      if (doc.exists) {
+        const data = doc.data();
+        currentBalance = data.balance || 0;
+      }
+    });
+});
+
 const coinList = [
   { symbol: 'BTCUSDT', name: 'Bitcoin', short: 'BTC', icon: 'btc' },
   { symbol: 'ETHUSDT', name: 'Ethereum', short: 'ETH', icon: 'eth' },
@@ -212,7 +257,7 @@ const coinList = [
   { symbol: 'HBARUSDT', name: 'Hedera', short: 'HBAR', icon: 'hbar' }
 ];
 
-// Duration options with their virtual-amount ranges and step sizes
+// Duration options with their amount ranges and step sizes
 const durationList = [
   { seconds: 60,  returnPct: 20.00, min: 100,    max: 9999,     step: 100   },
   { seconds: 120, returnPct: 25.00, min: 10000,  max: 49999,    step: 1000  },
@@ -222,23 +267,6 @@ const durationList = [
 ];
 
 let selectedDuration = null;
-
-// ---------- Demo balance (virtual, stored locally in this browser only, no UI box) ----------
-const BALANCE_KEY = 'demoBalance_v1';
-function getBalance() {
-  const v = localStorage.getItem(BALANCE_KEY);
-  return v === null ? 10000 : parseFloat(v);
-}
-function setBalance(val) {
-  localStorage.setItem(BALANCE_KEY, val.toFixed(2));
-  renderBalance();
-}
-function renderBalance() {
-  const el = document.getElementById('balance-display');
-  if (el) {
-    el.textContent = '$' + getBalance().toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' (Virtual)';
-  }
-}
 
 // ---------- Duration boxes ----------
 function renderDurationBoxes() {
@@ -267,10 +295,10 @@ function showInvestSection(d) {
   section.style.display = 'block';
   errorEl.textContent = '';
   input.value = '';
-  input.placeholder = 'Investment amount (Virtual $)';
+  input.placeholder = 'Investment amount';
 
   if (d.max === Infinity) {
-    rangeText.textContent = `Amount range: ${d.min.toLocaleString()}+ (কোনো ঊর্ধ্বসীমা নেই)`;
+    rangeText.textContent = `Amount range: ${d.min.toLocaleString()}+ (no upper limit)`;
   } else {
     rangeText.textContent = `Amount range: ${d.min.toLocaleString()} - ${d.max.toLocaleString()}`;
   }
@@ -294,21 +322,21 @@ function validateAmount() {
   const errorEl = document.getElementById('amount-error');
   errorEl.textContent = '';
   if (!selectedDuration) {
-    errorEl.textContent = 'আগে একটি সময়সীমা (Duration) বাছাই করুন।';
+    errorEl.textContent = 'Please select a duration first.';
     return null;
   }
   const input = document.getElementById('amount-input');
   const val = parseFloat(input.value);
   if (isNaN(val) || val <= 0) {
-    errorEl.textContent = 'একটি সংখ্যা লিখুন।';
+    errorEl.textContent = 'Please enter a number.';
     return null;
   }
   if (val < selectedDuration.min || (selectedDuration.max !== Infinity && val > selectedDuration.max)) {
-    errorEl.textContent = `পরিমাণ অবশ্যই ${selectedDuration.min.toLocaleString()}${selectedDuration.max !== Infinity ? ' - ' + selectedDuration.max.toLocaleString() : '+'} এর মধ্যে হতে হবে।`;
+    errorEl.textContent = `Amount must be between ${selectedDuration.min.toLocaleString()}${selectedDuration.max !== Infinity ? ' and ' + selectedDuration.max.toLocaleString() : '+'}.`;
     return null;
   }
   if (val > getBalance()) {
-    errorEl.textContent = 'আপনার Demo Balance পর্যাপ্ত নয়।';
+    errorEl.textContent = 'Insufficient balance.';
     return null;
   }
   return val;
@@ -375,7 +403,6 @@ function openChart(coin) {
   document.getElementById('chart-icon').src = iconUrl(coin.icon);
   document.getElementById('chart-pair').textContent = coin.short + '/USDT';
 
-  renderBalance();
   renderDurationBoxes();
   document.getElementById('invest-section').style.display = 'none';
   selectedDuration = null;
@@ -495,7 +522,7 @@ async function loadChart() {
   }
 }
 
-// ---------- Demo trade execution (resolved by real live price movement) ----------
+// ---------- Trade execution (resolved by real live price movement) ----------
 async function fetchLivePrice(symbol) {
   const res = await fetch(`https://api.binance.com/api/v3/ticker/price?symbol=${symbol}`);
   const data = await res.json();
@@ -518,28 +545,29 @@ async function placeTrade(direction) {
   downBtn.disabled = true;
   amountInput.disabled = true;
 
-  // Deduct the virtual stake immediately
-  setBalance(getBalance() - amount);
+  // Deduct the stake immediately
+  const balanceAfterStake = getBalance() - amount;
+  setBalance(balanceAfterStake);
 
   let entryPrice;
   try {
     entryPrice = await fetchLivePrice(currentSymbol.symbol);
   } catch (err) {
     statusEl.className = 'trade-status lose';
-    statusEl.textContent = 'দাম আনতে সমস্যা হয়েছে, ট্রেড বাতিল করা হয়েছে।';
-    setBalance(getBalance() + amount); // refund
+    statusEl.textContent = 'Failed to fetch price, trade cancelled.';
+    setBalance(balanceAfterStake + amount); // refund
     resetTradeButtons();
     return;
   }
 
   let remaining = duration.seconds;
   statusEl.className = 'trade-status pending';
-  statusEl.textContent = `Position খোলা হয়েছে: ${direction.toUpperCase()} | Entry: ${entryPrice} | বাকি সময়: ${remaining}s`;
+  statusEl.textContent = `Position opened: ${direction.toUpperCase()} | Entry: ${entryPrice} | Time left: ${remaining}s`;
 
   const countdownTimer = setInterval(() => {
     remaining -= 1;
     if (remaining >= 0) {
-      statusEl.textContent = `Position খোলা হয়েছে: ${direction.toUpperCase()} | Entry: ${entryPrice} | বাকি সময়: ${remaining}s`;
+      statusEl.textContent = `Position opened: ${direction.toUpperCase()} | Entry: ${entryPrice} | Time left: ${remaining}s`;
     }
   }, 1000);
 
@@ -550,8 +578,8 @@ async function placeTrade(direction) {
       exitPrice = await fetchLivePrice(currentSymbol.symbol);
     } catch (err) {
       statusEl.className = 'trade-status lose';
-      statusEl.textContent = 'দাম যাচাই করতে সমস্যা হয়েছে, স্টেক ফেরত দেওয়া হলো।';
-      setBalance(getBalance() + amount);
+      statusEl.textContent = 'Failed to verify price, stake refunded.';
+      setBalance(balanceAfterStake + amount);
       resetTradeButtons();
       return;
     }
@@ -562,18 +590,18 @@ async function placeTrade(direction) {
     const tie = exitPrice === entryPrice;
 
     if (tie) {
-      setBalance(getBalance() + amount);
+      setBalance(balanceAfterStake + amount);
       statusEl.className = 'trade-status pending';
-      statusEl.textContent = `দাম অপরিবর্তিত (Entry: ${entryPrice} → Exit: ${exitPrice})। স্টেক ফেরত দেওয়া হলো।`;
+      statusEl.textContent = `Price unchanged (Entry: ${entryPrice} → Exit: ${exitPrice}). Stake refunded.`;
     } else if (won) {
       const profit = amount * (duration.returnPct / 100);
       const payout = amount + profit;
-      setBalance(getBalance() + payout);
+      setBalance(balanceAfterStake + payout);
       statusEl.className = 'trade-status win';
-      statusEl.textContent = `✅ জিতেছেন! Entry: ${entryPrice} → Exit: ${exitPrice}। লাভ: +$${profit.toFixed(2)} (Virtual)`;
+      statusEl.textContent = `✅ You won! Entry: ${entryPrice} → Exit: ${exitPrice}. Profit: +$${profit.toFixed(2)}`;
     } else {
       statusEl.className = 'trade-status lose';
-      statusEl.textContent = `❌ হেরেছেন। Entry: ${entryPrice} → Exit: ${exitPrice}। স্টেক হারিয়েছেন: -$${amount.toFixed(2)} (Virtual)`;
+      statusEl.textContent = `❌ You lost. Entry: ${entryPrice} → Exit: ${exitPrice}. Stake lost: -$${amount.toFixed(2)}`;
     }
 
     resetTradeButtons();
@@ -590,7 +618,6 @@ function resetTradeButtons() {
 document.getElementById('up-btn').addEventListener('click', () => placeTrade('up'));
 document.getElementById('down-btn').addEventListener('click', () => placeTrade('down'));
 
-renderBalance();
 loadCoinList();
 </script>
 </body>
