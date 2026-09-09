@@ -120,7 +120,6 @@ const firebaseConfig = {
 };
 firebase.initializeApp(firebaseConfig);
 
-// ==== এখানে তোমার imgbb API key বসাও ====
 const IMGBB_API_KEY = '0dae5f846c7bc79071442d3c548697fc';
 
 let currentUser = null;
@@ -190,10 +189,6 @@ document.getElementById('upload-btn').addEventListener('click', () => {
   const amountVal = parseFloat(document.getElementById('amount-input').value);
   if (isNaN(amountVal) || amountVal <= 0) {
     errorEl.textContent = 'Please enter the deposit amount.';
-    return;
-  }
-  if (!IMGBB_API_KEY || IMGBB_API_KEY === 'YOUR_IMGBB_API_KEY_HERE') {
-    errorEl.textContent = 'imgbb API key not set in the code yet.';
     return;
   }
   errorEl.textContent = '';
