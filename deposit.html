@@ -161,7 +161,7 @@ function selectAsset(a) {
   document.getElementById('amount-input').placeholder = `Enter deposit amount (${a.symbol})`;
   document.getElementById('amount-input').value = '';
   document.getElementById('amount-error').textContent = '';
-});
+}
 
 document.getElementById('copy-btn').addEventListener('click', function () {
   const address = this.dataset.address;
