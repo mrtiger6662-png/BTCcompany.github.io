@@ -39,8 +39,16 @@
 
   .warning-box {
     background:#161a1e; border-radius:8px; padding:14px; color:#848e9c;
-    font-size:12.5px; line-height:1.6; margin-bottom:20px;
+    font-size:12.5px; line-height:1.6; margin-bottom:16px;
   }
+
+  .amount-label { font-size:13px; color:#848e9c; margin-bottom:6px; }
+  .amount-input {
+    width:100%; background:#161a1e; border:1px solid #2b3139; color:#eaecef;
+    padding:14px; border-radius:8px; font-size:15px; font-weight:bold; margin-bottom:8px;
+  }
+  .amount-input::placeholder { color:#5b6169; font-weight:normal; }
+  .amount-error { text-align:center; font-size:12px; color:#f6465d; margin-bottom:8px; min-height:14px; }
 
   .upload-btn {
     width:100%; background:#f0b90b; color:#202630; border:none;
@@ -93,6 +101,10 @@
     Please do not send other types of assets to the above address. This action may result in the loss of your assets. After the transmission is successful, the network node needs to confirm receipt of the corresponding assets. After the transfer is successful, please contact online customer service for confirmation.
   </div>
 
+  <div class="amount-label" id="amount-label">আপনি কত জমা করেছেন?</div>
+  <input type="number" class="amount-input" id="amount-input" placeholder="Enter deposit amount">
+  <div class="amount-error" id="amount-error"></div>
+
   <input type="file" id="proof-input" accept="image/*" style="display:none;">
   <button class="upload-btn" id="upload-btn">Upload Proof</button>
   <div class="proof-status" id="proof-status"></div>
@@ -113,6 +125,8 @@ const depositAssets = [
   { symbol: 'USDC', name: 'USD Coin',  icon: 'usdc', network: 'Ethereum (ERC20)',    address: '0xAf26e02916bfbc0E49CE82A253988058259fe71E' },
   { symbol: 'SOL',  name: 'Solana',    icon: 'sol',  network: 'Solana',              address: 'Dt2h9YR127SM2kTiPS3keir1fqYN1qp9ZH2MNpAEHm6P' }
 ];
+
+let currentAsset = null;
 
 function iconUrl(icon) {
   return 'https://cdn.jsdelivr.net/gh/spothq/cryptocurrency-icons@master/128/color/' + icon + '.png';
@@ -135,6 +149,7 @@ function renderTabs() {
 }
 
 function selectAsset(a) {
+  currentAsset = a;
   document.getElementById('header-icon').src = iconUrl(a.icon);
   document.getElementById('network-label').textContent = 'Network: ' + a.network;
   document.getElementById('address-box').textContent = a.address;
@@ -142,6 +157,10 @@ function selectAsset(a) {
   document.getElementById('copy-btn').classList.remove('copied');
   document.getElementById('copy-btn').textContent = 'Copy address';
   document.getElementById('copy-btn').dataset.address = a.address;
+  document.getElementById('amount-label').textContent = `আপনি কত ${a.symbol} জমা করেছেন?`;
+  document.getElementById('amount-input').placeholder = `Enter deposit amount (${a.symbol})`;
+  document.getElementById('amount-input').value = '';
+  document.getElementById('amount-error').textContent = '';
 }
 
 document.getElementById('copy-btn').addEventListener('click', function () {
@@ -157,13 +176,21 @@ document.getElementById('copy-btn').addEventListener('click', function () {
 });
 
 document.getElementById('upload-btn').addEventListener('click', () => {
+  const errorEl = document.getElementById('amount-error');
+  const amountVal = parseFloat(document.getElementById('amount-input').value);
+  if (isNaN(amountVal) || amountVal <= 0) {
+    errorEl.textContent = 'দয়া করে জমাকৃত পরিমাণ লিখুন।';
+    return;
+  }
+  errorEl.textContent = '';
   document.getElementById('proof-input').click();
 });
 
 document.getElementById('proof-input').addEventListener('change', function () {
   if (this.files && this.files.length > 0) {
+    const amountVal = document.getElementById('amount-input').value;
     const statusEl = document.getElementById('proof-status');
-    statusEl.textContent = 'প্রমাণ জমা হয়েছে, আমরা শীঘ্রই যাচাই করে জানাবো।';
+    statusEl.textContent = `${amountVal} ${currentAsset.symbol}-এর প্রমাণ জমা হয়েছে, আমরা শীঘ্রই যাচাই করে জানাবো।`;
     statusEl.classList.add('show');
   }
 });
