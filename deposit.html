@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Deposit - ABC Company</title>
+<style>
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:Arial, sans-serif; background:#0b0e11; color:#eaecef; padding-bottom:70px; }
+  header { display:flex; align-items:center; gap:10px; padding:16px 20px; position:relative; }
+  header h1 { font-size:18px; margin:0; }
+  .back-btn {
+    background:none; border:none; color:#eaecef; font-size:20px; cursor:pointer; padding:0;
+  }
+  .asset-icon-header { width:22px; height:22px; }
+
+  .tabs { display:flex; gap:8px; padding:0 16px 16px; overflow-x:auto; }
+  .tabs button {
+    background:#1e2329; border:1px solid #2b3139; color:#848e9c;
+    padding:8px 16px; border-radius:20px; white-space:nowrap; cursor:pointer; font-weight:bold;
+  }
+  .tabs button.active { background:#f0b90b; color:#202630; border-color:#f0b90b; }
+
+  .content { padding:0 16px; }
+  .network-label { color:#848e9c; font-size:13px; margin-bottom:10px; }
+
+  .address-box {
+    background:#161a1e; border:1px solid #2b3139; border-radius:8px;
+    padding:12px 14px; font-size:13px; word-break:break-all; margin-bottom:12px;
+  }
+  .copy-btn {
+    width:100%; background:#1e2329; border:1px solid #f0b90b; color:#f0b90b;
+    padding:12px; border-radius:8px; font-weight:bold; cursor:pointer; margin-bottom:20px;
+  }
+  .copy-btn.copied { background:#f0b90b; color:#202630; }
+
+  .qr-wrap { display:flex; justify-content:center; margin-bottom:20px; }
+  .qr-wrap img { width:200px; height:200px; border-radius:8px; background:#fff; padding:8px; }
+
+  .warning-box {
+    background:#161a1e; border-radius:8px; padding:14px; color:#848e9c;
+    font-size:12.5px; line-height:1.6; margin-bottom:20px;
+  }
+
+  .upload-btn {
+    width:100%; background:#f0b90b; color:#202630; border:none;
+    padding:14px; border-radius:8px; font-weight:bold; font-size:15px; cursor:pointer;
+  }
+  .proof-status {
+    text-align:center; font-size:13px; margin-top:12px; padding:10px;
+    border-radius:8px; display:none;
+  }
+  .proof-status.show { display:block; background:rgba(14,203,129,0.12); color:#0ecb81; }
+
+  .bottom-nav {
+    position:fixed; bottom:0; left:0; right:0; background:#161a1e;
+    display:flex; justify-content:space-around; padding:10px 0;
+    border-top:1px solid #2b3139;
+  }
+  .bottom-nav a { text-decoration:none; }
+  .bottom-nav div { text-align:center; color:#848e9c; font-size:11px; cursor:pointer; }
+  .bottom-nav div.active { color:#f0b90b; }
+  .bottom-nav .ic {
+    font-size:18px; width:38px; height:38px; line-height:38px;
+    margin:0 auto 2px; border-radius:50%; transition:0.2s;
+  }
+  .bottom-nav div.active .ic {
+    background:rgba(240,185,11,0.15);
+    box-shadow:0 0 0 6px rgba(240,185,11,0.08);
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <a href="profile.html" class="back-btn">&#8592;</a>
+  <h1>Deposit <img class="asset-icon-header" id="header-icon" src="" alt=""></h1>
+</header>
+
+<div class="tabs" id="asset-tabs"></div>
+
+<div class="content">
+  <div class="network-label" id="network-label">Network: -</div>
+
+  <div class="address-box" id="address-box">-</div>
+  <button class="copy-btn" id="copy-btn">Copy address</button>
+
+  <div class="qr-wrap">
+    <img id="qr-img" src="" alt="QR code">
+  </div>
+
+  <div class="warning-box">
+    Please do not send other types of assets to the above address. This action may result in the loss of your assets. After the transmission is successful, the network node needs to confirm receipt of the corresponding assets. After the transfer is successful, please contact online customer service for confirmation.
+  </div>
+
+  <input type="file" id="proof-input" accept="image/*" style="display:none;">
+  <button class="upload-btn" id="upload-btn">Upload Proof</button>
+  <div class="proof-status" id="proof-status"></div>
+</div>
+
+<div class="bottom-nav">
+  <a href="market.html"><div><div class="ic">&#128200;</div>Market</div></a>
+  <a href="trade.html"><div><div class="ic">&#128179;</div>Trade</div></a>
+  <a href="assets.html"><div><div class="ic">&#128188;</div>Assets</div></a>
+  <a href="profile.html"><div class="active"><div class="ic">&#128100;</div>Profile</div></a>
+</div>
+
+<script>
+const depositAssets = [
+  { symbol: 'BTC',  name: 'Bitcoin',   icon: 'btc',  network: 'Bitcoin (BTC)',       address: 'bc1q8sfwmlkqfpmeuu2elnpet95wahpg9f96vqr6x9' },
+  { symbol: 'ETH',  name: 'Ethereum',  icon: 'eth',  network: 'Ethereum (ERC20)',    address: '0xAf26e02916bfbc0E49CE82A253988058259fe71E' },
+  { symbol: 'USDT', name: 'Tether',    icon: 'usdt', network: 'Ethereum (ERC20)',    address: '0xAf26e02916bfbc0E49CE82A253988058259fe71E' },
+  { symbol: 'USDC', name: 'USD Coin',  icon: 'usdc', network: 'Ethereum (ERC20)',    address: '0xAf26e02916bfbc0E49CE82A253988058259fe71E' },
+  { symbol: 'SOL',  name: 'Solana',    icon: 'sol',  network: 'Solana',              address: 'Dt2h9YR127SM2kTiPS3keir1fqYN1qp9ZH2MNpAEHm6P' }
+];
+
+function iconUrl(icon) {
+  return 'https://cdn.jsdelivr.net/gh/spothq/cryptocurrency-icons@master/128/color/' + icon + '.png';
+}
+
+function renderTabs() {
+  const tabsEl = document.getElementById('asset-tabs');
+  tabsEl.innerHTML = '';
+  depositAssets.forEach((a, i) => {
+    const btn = document.createElement('button');
+    btn.textContent = a.symbol;
+    if (i === 0) btn.classList.add('active');
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tabs button').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      selectAsset(a);
+    });
+    tabsEl.appendChild(btn);
+  });
+}
+
+function selectAsset(a) {
+  document.getElementById('header-icon').src = iconUrl(a.icon);
+  document.getElementById('network-label').textContent = 'Network: ' + a.network;
+  document.getElementById('address-box').textContent = a.address;
+  document.getElementById('qr-img').src = 'https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=' + encodeURIComponent(a.address);
+  document.getElementById('copy-btn').classList.remove('copied');
+  document.getElementById('copy-btn').textContent = 'Copy address';
+  document.getElementById('copy-btn').dataset.address = a.address;
+}
+
+document.getElementById('copy-btn').addEventListener('click', function () {
+  const address = this.dataset.address;
+  navigator.clipboard.writeText(address).then(() => {
+    this.textContent = 'Copied!';
+    this.classList.add('copied');
+    setTimeout(() => {
+      this.textContent = 'Copy address';
+      this.classList.remove('copied');
+    }, 2000);
+  });
+});
+
+document.getElementById('upload-btn').addEventListener('click', () => {
+  document.getElementById('proof-input').click();
+});
+
+document.getElementById('proof-input').addEventListener('change', function () {
+  if (this.files && this.files.length > 0) {
+    const statusEl = document.getElementById('proof-status');
+    statusEl.textContent = 'প্রমাণ জমা হয়েছে, আমরা শীঘ্রই যাচাই করে জানাবো।';
+    statusEl.classList.add('show');
+  }
+});
+
+renderTabs();
+selectAsset(depositAssets[0]);
+</script>
+</body>
+</html>
