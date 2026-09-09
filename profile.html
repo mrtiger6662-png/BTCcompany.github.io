@@ -121,7 +121,7 @@ firebase.auth().onAuthStateChanged(async user => {
   } catch (e) {}
   card.innerHTML = `
     <div class="row"><span class="label">Email/Phone</span><span class="value">${identifier}</span></div>
-    <div class="row"><span class="label">UID</span><span class="value">${user.uid}</span></div>
+    <div class="row"><span class="label">Account ID</span><span class="value">${accountId}</span></div>
     <div class="row"><span class="label">Joined</span><span class="value">${createdAtStr}</span></div>
   `;
 });
