@@ -76,11 +76,13 @@
   }
   .amt-btn:active { background:#2b3139; }
   .amount-range { text-align:center; font-size:12px; color:#848e9c; margin-top:6px; }
+  .amount-error { text-align:center; font-size:12px; color:#f6465d; margin-top:4px; min-height:14px; }
+
   .balance-display {
-  text-align:center; font-size:13px; font-weight:bold; color:#f0b90b;
-  border:1px solid #f0b90b; border-radius:6px; padding:8px 10px;
-  margin-top:8px; background:rgba(240,185,11,0.08);
-}
+    text-align:center; font-size:13px; font-weight:bold; color:#f0b90b;
+    border:1px solid #f0b90b; border-radius:6px; padding:8px 10px;
+    margin-top:8px; background:rgba(240,185,11,0.08);
+  }
 
   .direction-row { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:14px; }
   .down-btn, .up-btn {
@@ -89,14 +91,6 @@
   .down-btn { background:rgba(246,70,93,0.12); border:1px solid #f6465d; color:#f6465d; }
   .up-btn { background:rgba(14,203,129,0.12); border:1px solid #0ecb81; color:#0ecb81; }
   .down-btn:disabled, .up-btn:disabled { opacity:0.4; cursor:not-allowed; }
-
-  .trade-status {
-    margin-top:14px; text-align:center; font-size:13px; padding:10px;
-    border-radius:8px; display:none;
-  }
-  .trade-status.pending { display:block; background:rgba(240,185,11,0.1); color:#f0b90b; }
-  .trade-status.win { display:block; background:rgba(14,203,129,0.12); color:#0ecb81; }
-  .trade-status.lose { display:block; background:rgba(246,70,93,0.12); color:#f6465d; }
 
   .bottom-nav {
     position:fixed; bottom:0; left:0; right:0; background:#161a1e;
@@ -114,6 +108,41 @@
     background:rgba(240,185,11,0.15);
     box-shadow:0 0 0 6px rgba(240,185,11,0.08);
   }
+
+  /* ---------- Trade result popup (matches the ethusdt card screenshots) ---------- */
+  .tm-overlay {
+    display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6);
+    align-items:center; justify-content:center; z-index:9999; padding:20px;
+  }
+  .tm-overlay.active { display:flex; }
+  .tm-card {
+    width:100%; max-width:320px; background:linear-gradient(160deg,#1e5fe0,#0f3fae);
+    border-radius:22px; padding:28px 22px; text-align:center; color:#fff;
+    box-shadow:0 12px 40px rgba(0,0,0,0.5);
+  }
+  .tm-title { font-size:19px; font-weight:bold; margin-bottom:18px; }
+  .tm-timer-circle {
+    width:72px; height:72px; border-radius:50%; border:3px solid #f0b90b;
+    display:flex; align-items:center; justify-content:center;
+    margin:0 auto 20px; font-weight:bold; font-size:16px; color:#f0b90b;
+  }
+  .tm-result { font-size:28px; font-weight:bold; margin-bottom:18px; display:none; }
+  .tm-rows { text-align:left; margin-bottom:14px; }
+  .tm-row {
+    display:flex; justify-content:space-between; padding:7px 0;
+    font-size:13.5px; color:#c9d6f5; border-bottom:1px solid rgba(255,255,255,0.08);
+  }
+  .tm-row:last-child { border-bottom:none; }
+  .tm-row span:last-child { color:#fff; font-weight:bold; }
+  .tm-order-number {
+    font-size:11px; color:#9fb3e6; word-break:break-all; margin-top:10px;
+  }
+  .tm-again-btn {
+    display:none; margin-top:18px; width:100%; padding:13px; border:none;
+    border-radius:24px; background:#eef3ff; color:#1a4fce; font-weight:bold;
+    font-size:14px; cursor:pointer;
+  }
+  .tm-again-btn:active { background:#d9e4ff; }
 </style>
 </head>
 <body>
@@ -171,8 +200,6 @@
         <button class="down-btn" id="down-btn">Down</button>
         <button class="up-btn" id="up-btn">UP</button>
       </div>
-
-      <div class="trade-status" id="trade-status"></div>
     </div>
   </div>
 </div>
@@ -182,6 +209,28 @@
   <div class="active"><div class="ic">&#128179;</div>Trade</div>
   <a href="assets.html"><div><div class="ic">&#128188;</div>Assets</div></a>
   <a href="profile.html"><div><div class="ic">&#128100;</div>Profile</div></a>
+</div>
+
+<!-- ---------- Trade popup card ---------- -->
+<div class="tm-overlay" id="trade-modal-overlay">
+  <div class="tm-card">
+    <div class="tm-title" id="tm-title">ethusdt</div>
+
+    <div class="tm-timer-circle" id="tm-timer-circle"><span id="tm-timer-text">60s</span></div>
+    <div class="tm-result" id="tm-result"></div>
+
+    <div class="tm-rows">
+      <div class="tm-row"><span>Open price</span><span id="tm-open">-</span></div>
+      <div class="tm-row"><span>Last price:</span><span id="tm-last">-</span></div>
+      <div class="tm-row"><span id="tm-direction-label">Up:</span><span id="tm-amount">-</span></div>
+      <div class="tm-row"><span>Fee:</span><span id="tm-fee">-</span></div>
+      <div class="tm-row"><span>Expected return:</span><span id="tm-return">-</span></div>
+    </div>
+
+    <div class="tm-order-number" id="tm-order-number">Order number: -</div>
+
+    <button class="tm-again-btn" id="tm-again-btn">Order again</button>
+  </div>
 </div>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -277,6 +326,9 @@ const durationList = [
   { seconds: 300, returnPct: 50.00, min: 100000, max: 5000000,  step: 10000 },
   { seconds: 600, returnPct: 85.00, min: 100000, max: Infinity, step: 10000 }
 ];
+
+// Fee rate applied on every trade (0.2 USD fee on a 100 USD stake = 0.2%)
+const FEE_RATE = 0.002;
 
 let selectedDuration = null;
 
@@ -535,6 +587,45 @@ async function loadChart() {
   }
 }
 
+// ---------- Trade popup helpers ----------
+const tmOverlay = document.getElementById('trade-modal-overlay');
+const tmTitle = document.getElementById('tm-title');
+const tmTimerCircle = document.getElementById('tm-timer-circle');
+const tmTimerText = document.getElementById('tm-timer-text');
+const tmResult = document.getElementById('tm-result');
+const tmOpen = document.getElementById('tm-open');
+const tmLast = document.getElementById('tm-last');
+const tmDirectionLabel = document.getElementById('tm-direction-label');
+const tmAmount = document.getElementById('tm-amount');
+const tmFee = document.getElementById('tm-fee');
+const tmReturn = document.getElementById('tm-return');
+const tmOrderNumber = document.getElementById('tm-order-number');
+const tmAgainBtn = document.getElementById('tm-again-btn');
+
+function generateOrderNumber() {
+  const now = new Date();
+  const pad = (n) => String(n).padStart(2, '0');
+  const datePart = `${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+  const rand = Math.floor(10000 + Math.random() * 90000);
+  return `O${datePart}${rand}`;
+}
+
+function openTradeModal() {
+  tmOverlay.classList.add('active');
+}
+
+function closeTradeModal() {
+  tmOverlay.classList.remove('active');
+}
+
+// "Order again" resets back to the duration-selection screen (before invest section)
+tmAgainBtn.addEventListener('click', () => {
+  closeTradeModal();
+  document.getElementById('invest-section').style.display = 'none';
+  selectedDuration = null;
+  document.querySelectorAll('.duration-box').forEach(b => b.classList.remove('selected'));
+});
+
 // ---------- Trade execution (resolved by real live price movement) ----------
 async function fetchLivePrice(symbol) {
   const res = await fetch(`https://api.binance.com/api/v3/ticker/price?symbol=${symbol}`);
@@ -547,7 +638,6 @@ async function placeTrade(direction) {
   const amount = validateAmount();
   if (amount === null) return;
 
-  const statusEl = document.getElementById('trade-status');
   const upBtn = document.getElementById('up-btn');
   const downBtn = document.getElementById('down-btn');
   const amountInput = document.getElementById('amount-input');
@@ -566,21 +656,44 @@ async function placeTrade(direction) {
   try {
     entryPrice = await fetchLivePrice(currentSymbol.symbol);
   } catch (err) {
-    statusEl.className = 'trade-status lose';
-    statusEl.textContent = 'Failed to fetch price, trade cancelled.';
     setBalance(balanceAfterStake + amount); // refund
     resetTradeButtons();
+    alert('Failed to fetch price, trade cancelled.');
     return;
   }
 
-  let remaining = duration.seconds;
-  statusEl.className = 'trade-status pending';
-  statusEl.textContent = `Position opened: ${direction.toUpperCase()} | Entry: ${entryPrice} | Time left: ${remaining}s`;
+  const fee = amount * FEE_RATE;
+  const expectedReturn = amount * (duration.returnPct / 100);
+  const orderNumber = generateOrderNumber();
 
-  const countdownTimer = setInterval(() => {
+  // ---- Show the pending popup card ----
+  tmTitle.textContent = currentSymbol.symbol.toLowerCase();
+  tmTimerCircle.style.display = 'flex';
+  tmResult.style.display = 'none';
+  tmOpen.textContent = entryPrice.toFixed(2) + ' USD';
+  tmLast.textContent = entryPrice.toFixed(2) + ' USD';
+  tmDirectionLabel.textContent = direction === 'up' ? 'Up:' : 'Down:';
+  tmAmount.textContent = amount.toFixed(0) + ' USD';
+  tmFee.textContent = fee.toFixed(2) + ' USD';
+  tmReturn.textContent = expectedReturn.toFixed(2) + 'USD';
+  tmOrderNumber.textContent = 'Order number: ' + orderNumber;
+  tmAgainBtn.style.display = 'none';
+  openTradeModal();
+
+  let remaining = duration.seconds;
+  tmTimerText.textContent = remaining + 's';
+
+  const countdownTimer = setInterval(async () => {
     remaining -= 1;
     if (remaining >= 0) {
-      statusEl.textContent = `Position opened: ${direction.toUpperCase()} | Entry: ${entryPrice} | Time left: ${remaining}s`;
+      tmTimerText.textContent = remaining + 's';
+    }
+    // refresh the live "Last price" every couple of seconds
+    if (remaining > 0 && remaining % 2 === 0) {
+      try {
+        const p = await fetchLivePrice(currentSymbol.symbol);
+        tmLast.textContent = p.toFixed(2) + ' USD';
+      } catch (e) {}
     }
   }, 1000);
 
@@ -590,9 +703,12 @@ async function placeTrade(direction) {
     try {
       exitPrice = await fetchLivePrice(currentSymbol.symbol);
     } catch (err) {
-      statusEl.className = 'trade-status lose';
-      statusEl.textContent = 'Failed to verify price, stake refunded.';
       setBalance(balanceAfterStake + amount);
+      tmTimerCircle.style.display = 'none';
+      tmResult.style.display = 'block';
+      tmResult.style.color = '#f6465d';
+      tmResult.textContent = 'Error';
+      tmAgainBtn.style.display = 'block';
       resetTradeButtons();
       return;
     }
@@ -602,21 +718,26 @@ async function placeTrade(direction) {
     const won = (direction === 'up' && wentUp) || (direction === 'down' && wentDown);
     const tie = exitPrice === entryPrice;
 
+    tmLast.textContent = exitPrice.toFixed(2) + ' USD';
+    tmTimerCircle.style.display = 'none';
+    tmResult.style.display = 'block';
+
     if (tie) {
       setBalance(balanceAfterStake + amount);
-      statusEl.className = 'trade-status pending';
-      statusEl.textContent = `Price unchanged (Entry: ${entryPrice} → Exit: ${exitPrice}). Stake refunded.`;
+      tmResult.style.color = '#f0b90b';
+      tmResult.textContent = '±0 USD';
     } else if (won) {
-      const profit = amount * (duration.returnPct / 100);
+      const profit = expectedReturn;
       const payout = amount + profit;
       setBalance(balanceAfterStake + payout);
-      statusEl.className = 'trade-status win';
-      statusEl.textContent = `✅ You won! Entry: ${entryPrice} → Exit: ${exitPrice}. Profit: +$${profit.toFixed(2)}`;
+      tmResult.style.color = '#0ecb81';
+      tmResult.textContent = '+' + profit.toFixed(0) + ' USD';
     } else {
-      statusEl.className = 'trade-status lose';
-      statusEl.textContent = `❌ You lost. Entry: ${entryPrice} → Exit: ${exitPrice}. Stake lost: -$${amount.toFixed(2)}`;
+      tmResult.style.color = '#f6465d';
+      tmResult.textContent = '-' + amount.toFixed(0) + ' USD';
     }
 
+    tmAgainBtn.style.display = 'block';
     resetTradeButtons();
   }, duration.seconds * 1000);
 }
