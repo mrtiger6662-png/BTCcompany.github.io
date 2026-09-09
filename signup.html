@@ -26,6 +26,7 @@
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script>
 const firebaseConfig = {
   apiKey: "AIzaSyDJoPr8RvE1xkNTKRr5kwTx6E51GCMn_HE",
@@ -51,6 +52,14 @@ function signUp() {
   const email = identifier.includes('@') ? identifier : identifier.replace(/\D/g,'') + '@abccompany-users.com';
 
   firebase.auth().createUserWithEmailAndPassword(email, password)
+    .then(userCredential => {
+      const user = userCredential.user;
+      return firebase.firestore().collection('users').doc(user.uid).set({
+        identifier: identifier,
+        email: email,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    })
     .then(() => {
       msg.style.color = '#0ecb81';
       msg.textContent = 'Account created! Redirecting...';
