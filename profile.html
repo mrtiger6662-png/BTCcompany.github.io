@@ -28,6 +28,11 @@
     background:#1e2329; border:1px solid #2b3139; color:#eaecef;
     padding:12px 0; border-radius:8px; font-weight:bold; font-size:14px; cursor:pointer;
   }
+  .balance-actions .btn-primary {
+    background:#f0b90b;
+    color:#0b0e11;
+    border:1px solid #f0b90b;
+  }
 
   .card { background:#161a1e; border-radius:12px; margin:16px; padding:20px; }
   .row { display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid #1e2329; }
@@ -73,7 +78,7 @@
   </div>
   <div class="balance-usd" id="balanceUsd">&#8776; $0.00</div>
   <div class="balance-actions">
-    <button onclick="location.href='deposit.html'">Deposit</button>
+    <button class="btn-primary" onclick="location.href='deposit.html'">Deposit</button>
     <button onclick="location.href='withdraw.html'">Withdraw</button>
   </div>
 </div>
