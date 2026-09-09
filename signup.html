@@ -38,6 +38,18 @@ const firebaseConfig = {
 };
 firebase.initializeApp(firebaseConfig);
 
+async function getNextAccountId() {
+  const counterRef = firebase.firestore().collection('counters').doc('users');
+  const nextNumber = await firebase.firestore().runTransaction(async (t) => {
+    const doc = await t.get(counterRef);
+    const current = doc.exists ? doc.data().count : 1000;
+    const next = current + 1;
+    t.set(counterRef, { count: next });
+    return next;
+  });
+  return 'AB' + nextNumber;
+}
+
 function signUp() {
   const identifier = document.getElementById('phone').value.trim();
   const password = document.getElementById('password').value;
@@ -52,9 +64,11 @@ function signUp() {
   const email = identifier.includes('@') ? identifier : identifier.replace(/\D/g,'') + '@abccompany-users.com';
 
   firebase.auth().createUserWithEmailAndPassword(email, password)
-    .then(userCredential => {
+    .then(async userCredential => {
       const user = userCredential.user;
+      const accountId = await getNextAccountId();
       return firebase.firestore().collection('users').doc(user.uid).set({
+        accountId: accountId,
         identifier: identifier,
         email: email,
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
