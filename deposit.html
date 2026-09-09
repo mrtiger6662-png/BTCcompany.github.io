@@ -9,21 +9,16 @@
   body { margin:0; font-family:Arial, sans-serif; background:#0b0e11; color:#eaecef; padding-bottom:70px; }
   header { display:flex; align-items:center; gap:10px; padding:16px 20px; position:relative; }
   header h1 { font-size:18px; margin:0; }
-  .back-btn {
-    background:none; border:none; color:#eaecef; font-size:20px; cursor:pointer; padding:0;
-  }
+  .back-btn { background:none; border:none; color:#eaecef; font-size:20px; cursor:pointer; padding:0; }
   .asset-icon-header { width:22px; height:22px; }
-
   .tabs { display:flex; gap:8px; padding:0 16px 16px; overflow-x:auto; }
   .tabs button {
     background:#1e2329; border:1px solid #2b3139; color:#848e9c;
     padding:8px 16px; border-radius:20px; white-space:nowrap; cursor:pointer; font-weight:bold;
   }
   .tabs button.active { background:#f0b90b; color:#202630; border-color:#f0b90b; }
-
   .content { padding:0 16px; }
   .network-label { color:#848e9c; font-size:13px; margin-bottom:10px; }
-
   .address-box {
     background:#161a1e; border:1px solid #2b3139; border-radius:8px;
     padding:12px 14px; font-size:13px; word-break:break-all; margin-bottom:12px;
@@ -33,15 +28,12 @@
     padding:12px; border-radius:8px; font-weight:bold; cursor:pointer; margin-bottom:20px;
   }
   .copy-btn.copied { background:#f0b90b; color:#202630; }
-
   .qr-wrap { display:flex; justify-content:center; margin-bottom:20px; }
   .qr-wrap img { width:200px; height:200px; border-radius:8px; background:#fff; padding:8px; }
-
   .warning-box {
     background:#161a1e; border-radius:8px; padding:14px; color:#848e9c;
     font-size:12.5px; line-height:1.6; margin-bottom:16px;
   }
-
   .amount-label { font-size:13px; color:#848e9c; margin-bottom:6px; }
   .amount-input {
     width:100%; background:#161a1e; border:1px solid #2b3139; color:#eaecef;
@@ -49,17 +41,17 @@
   }
   .amount-input::placeholder { color:#5b6169; font-weight:normal; }
   .amount-error { text-align:center; font-size:12px; color:#f6465d; margin-bottom:8px; min-height:14px; }
-
   .upload-btn {
     width:100%; background:#f0b90b; color:#202630; border:none;
     padding:14px; border-radius:8px; font-weight:bold; font-size:15px; cursor:pointer;
   }
+  .upload-btn:disabled { opacity:0.5; cursor:not-allowed; }
   .proof-status {
     text-align:center; font-size:13px; margin-top:12px; padding:10px;
     border-radius:8px; display:none;
   }
   .proof-status.show { display:block; background:rgba(14,203,129,0.12); color:#0ecb81; }
-
+  .proof-status.error { background:rgba(246,70,93,0.12); color:#f6465d; }
   .bottom-nav {
     position:fixed; bottom:0; left:0; right:0; background:#161a1e;
     display:flex; justify-content:space-around; padding:10px 0;
@@ -89,13 +81,10 @@
 
 <div class="content">
   <div class="network-label" id="network-label">Network: -</div>
-
   <div class="address-box" id="address-box">-</div>
   <button class="copy-btn" id="copy-btn">Copy address</button>
 
-  <div class="qr-wrap">
-    <img id="qr-img" src="" alt="QR code">
-  </div>
+  <div class="qr-wrap"><img id="qr-img" src="" alt="QR code"></div>
 
   <div class="warning-box">
     Please do not send other types of assets to the above address. This action may result in the loss of your assets. After the transmission is successful, the network node needs to confirm receipt of the corresponding assets. After the transfer is successful, please contact online customer service for confirmation.
@@ -117,13 +106,35 @@
   <a href="profile.html"><div class="active"><div class="ic">&#128100;</div>Profile</div></a>
 </div>
 
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script>
+const firebaseConfig = {
+  apiKey: "AIzaSyDJoPr8RvE1xkNTKRr5kwTx6E51GCMn_HE",
+  authDomain: "abc-company-6272a.firebaseapp.com",
+  projectId: "abc-company-6272a",
+  storageBucket: "abc-company-6272a.firebasestorage.app",
+  messagingSenderId: "1026212780106",
+  appId: "1:1026212780106:web:985ec1bc35837d6320eeb3"
+};
+firebase.initializeApp(firebaseConfig);
+
+// ==== এখানে তোমার imgbb API key বসাও ====
+const IMGBB_API_KEY = 'YOUR_IMGBB_API_KEY_HERE';
+
+let currentUser = null;
+firebase.auth().onAuthStateChanged(user => {
+  if (!user) { window.location.href = 'login.html'; return; }
+  currentUser = user;
+});
+
 const depositAssets = [
-  { symbol: 'BTC',  name: 'Bitcoin',   icon: 'btc',  network: 'Bitcoin (BTC)',       address: 'bc1q8sfwmlkqfpmeuu2elnpet95wahpg9f96vqr6x9' },
-  { symbol: 'ETH',  name: 'Ethereum',  icon: 'eth',  network: 'Ethereum (ERC20)',    address: '0xAf26e02916bfbc0E49CE82A253988058259fe71E' },
-  { symbol: 'USDT', name: 'Tether',    icon: 'usdt', network: 'Ethereum (ERC20)',    address: '0xAf26e02916bfbc0E49CE82A253988058259fe71E' },
-  { symbol: 'USDC', name: 'USD Coin',  icon: 'usdc', network: 'Ethereum (ERC20)',    address: '0xAf26e02916bfbc0E49CE82A253988058259fe71E' },
-  { symbol: 'SOL',  name: 'Solana',    icon: 'sol',  network: 'Solana',              address: 'Dt2h9YR127SM2kTiPS3keir1fqYN1qp9ZH2MNpAEHm6P' }
+  { symbol: 'BTC',  name: 'Bitcoin',   icon: 'btc',  network: 'Bitcoin (BTC)',    address: 'bc1q8sfwmlkqfpmeuu2elnpet95wahpg9f96vqr6x9' },
+  { symbol: 'ETH',  name: 'Ethereum',  icon: 'eth',  network: 'Ethereum (ERC20)', address: '0xAf26e02916bfbc0E49CE82A253988058259fe71E' },
+  { symbol: 'USDT', name: 'Tether',    icon: 'usdt', network: 'Ethereum (ERC20)', address: '0xAf26e02916bfbc0E49CE82A253988058259fe71E' },
+  { symbol: 'USDC', name: 'USD Coin',  icon: 'usdc', network: 'Ethereum (ERC20)', address: '0xAf26e02916bfbc0E49CE82A253988058259fe71E' },
+  { symbol: 'SOL',  name: 'Solana',    icon: 'sol',  network: 'Solana',           address: 'Dt2h9YR127SM2kTiPS3keir1fqYN1qp9ZH2MNpAEHm6P' }
 ];
 
 let currentAsset = null;
@@ -161,6 +172,8 @@ function selectAsset(a) {
   document.getElementById('amount-input').placeholder = `Enter deposit amount (${a.symbol})`;
   document.getElementById('amount-input').value = '';
   document.getElementById('amount-error').textContent = '';
+  const statusEl = document.getElementById('proof-status');
+  statusEl.classList.remove('show', 'error');
 }
 
 document.getElementById('copy-btn').addEventListener('click', function () {
@@ -168,10 +181,7 @@ document.getElementById('copy-btn').addEventListener('click', function () {
   navigator.clipboard.writeText(address).then(() => {
     this.textContent = 'Copied!';
     this.classList.add('copied');
-    setTimeout(() => {
-      this.textContent = 'Copy address';
-      this.classList.remove('copied');
-    }, 2000);
+    setTimeout(() => { this.textContent = 'Copy address'; this.classList.remove('copied'); }, 2000);
   });
 });
 
@@ -182,16 +192,58 @@ document.getElementById('upload-btn').addEventListener('click', () => {
     errorEl.textContent = 'Please enter the deposit amount.';
     return;
   }
+  if (!IMGBB_API_KEY || IMGBB_API_KEY === 'YOUR_IMGBB_API_KEY_HERE') {
+    errorEl.textContent = 'imgbb API key not set in the code yet.';
+    return;
+  }
   errorEl.textContent = '';
   document.getElementById('proof-input').click();
 });
 
-document.getElementById('proof-input').addEventListener('change', function () {
-  if (this.files && this.files.length > 0) {
-    const amountVal = document.getElementById('amount-input').value;
-    const statusEl = document.getElementById('proof-status');
+document.getElementById('proof-input').addEventListener('change', async function () {
+  if (!this.files || this.files.length === 0) return;
+  if (!currentUser) return;
+
+  const file = this.files[0];
+  const amountVal = parseFloat(document.getElementById('amount-input').value);
+  const uploadBtn = document.getElementById('upload-btn');
+  const statusEl = document.getElementById('proof-status');
+
+  uploadBtn.disabled = true;
+  statusEl.className = 'proof-status show';
+  statusEl.textContent = 'Uploading proof, please wait...';
+
+  try {
+    const formData = new FormData();
+    formData.append('image', file);
+
+    const uploadRes = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, {
+      method: 'POST',
+      body: formData
+    });
+    const uploadData = await uploadRes.json();
+    if (!uploadData.success) throw new Error('Image upload failed');
+    const proofUrl = uploadData.data.url;
+
+    await firebase.firestore().collection('deposits').add({
+      uid: currentUser.uid,
+      userEmail: currentUser.email || '',
+      symbol: currentAsset.symbol,
+      claimedAmount: amountVal,
+      proofUrl: proofUrl,
+      status: 'pending',
+      creditedUSDT: null,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+
+    statusEl.className = 'proof-status show';
     statusEl.textContent = `Proof submitted for ${amountVal} ${currentAsset.symbol}. We will verify shortly.`;
-    statusEl.classList.add('show');
+  } catch (err) {
+    statusEl.className = 'proof-status show error';
+    statusEl.textContent = 'Something went wrong: ' + err.message;
+  } finally {
+    uploadBtn.disabled = false;
+    this.value = '';
   }
 });
 
