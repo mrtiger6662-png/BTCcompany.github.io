@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Withdraw - ABC Company</title>
+<style>
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:Arial, sans-serif; background:#0b0e11; color:#eaecef; padding-bottom:40px; }
+  header { display:flex; align-items:center; gap:10px; padding:16px 20px; }
+  .back-btn { background:none; border:none; color:#eaecef; font-size:20px; cursor:pointer; padding:0; }
+  header img { width:20px; height:20px; }
+  header span { font-size:14px; color:#848e9c; }
+
+  .content { padding:0 20px; }
+  h2 { font-size:20px; margin:0 0 20px; }
+
+  .field-label { font-size:12px; color:#848e9c; margin-bottom:6px; }
+  .field-row {
+    display:flex; align-items:center; background:#161a1e; border:1px solid #2b3139;
+    border-radius:8px; margin-bottom:16px; overflow:hidden;
+  }
+  .field-row input {
+    flex:1; background:transparent; border:none; color:#eaecef;
+    padding:14px; font-size:15px; outline:none;
+  }
+  .field-row input::placeholder { color:#5b6169; }
+  .coin-select {
+    background:#1e2329; border:none; border-left:1px solid #2b3139; color:#eaecef;
+    padding:14px 12px; font-weight:bold; font-size:14px; cursor:pointer; outline:none;
+  }
+
+  .error-msg { text-align:center; font-size:12px; color:#f6465d; margin-bottom:10px; min-height:14px; }
+
+  .withdraw-btn {
+    width:100%; background:#2f6fed; color:#fff; border:none;
+    padding:15px; border-radius:10px; font-weight:bold; font-size:16px; cursor:pointer; margin-bottom:20px;
+  }
+  .withdraw-btn:disabled { opacity:0.6; cursor:not-allowed; }
+
+  .info-text { text-align:center; color:#848e9c; font-size:12.5px; line-height:1.7; margin-bottom:10px; }
+
+  .status-msg {
+    text-align:center; font-size:13px; margin-top:14px; padding:10px;
+    border-radius:8px; display:none;
+  }
+  .status-msg.show { display:block; background:rgba(14,203,129,0.12); color:#0ecb81; }
+  .status-msg.error { background:rgba(246,70,93,0.12); color:#f6465d; }
+</style>
+</head>
+<body>
+
+<header>
+  <a href="profile.html" class="back-btn">&#8592;</a>
+  <img id="header-icon" src="" alt="">
+  <span id="header-label">Withdraw</span>
+</header>
+
+<div class="content">
+  <h2>Withdraw</h2>
+
+  <div class="field-label">Amount (USD):</div>
+  <div class="field-row">
+    <input type="number" id="amount-input" placeholder="Amount...">
+    <select class="coin-select" id="coin-select"></select>
+  </div>
+
+  <div class="field-label">Receiving address:</div>
+  <div class="field-row">
+    <input type="text" id="address-input" placeholder="Address...">
+  </div>
+
+  <div class="error-msg" id="error-msg"></div>
+
+  <button class="withdraw-btn" id="withdraw-btn">Withdraw now</button>
+
+  <div class="info-text">
+    Your withdrawal will be sent to your wallet address within the next 24 hours, please be patient and wait for the review to arrive.
+  </div>
+  <div class="info-text">The currency withdrawal fee is 2%</div>
+
+  <div class="status-msg" id="status-msg"></div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyDJoPr8RvE1xkNTKRr5kwTx6E51GCMn_HE",
+  authDomain: "abc-company-6272a.firebaseapp.com",
+  projectId: "abc-company-6272a",
+  storageBucket: "abc-company-6272a.firebasestorage.app",
+  messagingSenderId: "1026212780106",
+  appId: "1:1026212780106:web:985ec1bc35837d6320eeb3"
+};
+firebase.initializeApp(firebaseConfig);
+
+const coinList = [
+  { symbol: 'BTC',  icon: 'btc' },
+  { symbol: 'ETH',  icon: 'eth' },
+  { symbol: 'USDT', icon: 'usdt' },
+  { symbol: 'USDC', icon: 'usdc' },
+  { symbol: 'SOL',  icon: 'sol' }
+];
+
+function iconUrl(icon) {
+  return 'https://cdn.jsdelivr.net/gh/spothq/cryptocurrency-icons@master/128/color/' + icon + '.png';
+}
+
+function renderCoinSelect() {
+  const sel = document.getElementById('coin-select');
+  sel.innerHTML = '';
+  coinList.forEach(c => {
+    const opt = document.createElement('option');
+    opt.value = c.symbol;
+    opt.textContent = c.symbol;
+    sel.appendChild(opt);
+  });
+  updateHeader();
+}
+
+function updateHeader() {
+  const symbol = document.getElementById('coin-select').value;
+  const coin = coinList.find(c => c.symbol === symbol);
+  document.getElementById('header-icon').src = iconUrl(coin.icon);
+  document.getElementById('header-label').textContent = symbol + ' Withdraw';
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  renderCoinSelect();
+  document.getElementById('coin-select').addEventListener('change', updateHeader);
+});
+
+let currentUser = null;
+let currentBalance = 0;
+
+firebase.auth().onAuthStateChanged(async user => {
+  if (!user) { window.location.href = 'login.html'; return; }
+  currentUser = user;
+  try {
+    const doc = await firebase.firestore().collection('users').doc(user.uid).get();
+    if (doc.exists && typeof doc.data().balance === 'number') {
+      currentBalance = doc.data().balance;
+    }
+  } catch (e) {}
+});
+
+document.getElementById('withdraw-btn').addEventListener('click', async () => {
+  const errorEl = document.getElementById('error-msg');
+  const statusEl = document.getElementById('status-msg');
+  const btn = document.getElementById('withdraw-btn');
+  errorEl.textContent = '';
+  statusEl.classList.remove('show', 'error');
+
+  const amount = parseFloat(document.getElementById('amount-input').value);
+  const address = document.getElementById('address-input').value.trim();
+  const symbol = document.getElementById('coin-select').value;
+
+  if (isNaN(amount) || amount <= 0) {
+    errorEl.textContent = 'Please enter a valid amount.';
+    return;
+  }
+  if (!address) {
+    errorEl.textContent = 'Please enter a receiving address.';
+    return;
+  }
+  if (amount > currentBalance) {
+    errorEl.textContent = 'Insufficient balance.';
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Processing...';
+
+  try {
+    const feeAmount = amount * 0.02;
+    const netAmount = amount - feeAmount;
+
+    await firebase.firestore().collection('users').doc(currentUser.uid).set({
+      balance: firebase.firestore.FieldValue.increment(-amount)
+    }, { merge: true });
+
+    await firebase.firestore().collection('withdrawals').add({
+      uid: currentUser.uid,
+      userEmail: currentUser.email || '',
+      symbol: symbol,
+      amount: amount,
+      feeAmount: feeAmount,
+      netAmount: netAmount,
+      address: address,
+      status: 'pending',
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+
+    currentBalance -= amount;
+    statusEl.className = 'status-msg show';
+    statusEl.textContent = 'Your withdrawal request has been submitted and is pending review.';
+    document.getElementById('amount-input').value = '';
+    document.getElementById('address-input').value = '';
+  } catch (err) {
+    statusEl.className = 'status-msg show error';
+    statusEl.textContent = 'Something went wrong: ' + err.message;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Withdraw now';
+  }
+});
+</script>
+</body>
+</html>
