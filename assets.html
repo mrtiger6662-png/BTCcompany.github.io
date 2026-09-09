@@ -1,11 +1,147 @@
 <!DOCTYPE html>
-<html lang="bn">
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Assets</title>
-  <link rel="stylesheet" href="style.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Assets - ABC Company</title>
+<style>
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:Arial, sans-serif; background:#0b0e11; color:#eaecef; padding-bottom:70px; }
+  header { padding:16px 20px; text-align:center; }
+  header h1 { font-size:20px; margin:0; color:#f0b90b; }
+
+  .balance-card {
+    background:#161a1e; border-radius:12px; margin:16px; padding:20px;
+  }
+  .balance-title {
+    display:flex; align-items:center; gap:6px;
+    color:#848e9c; font-size:14px; margin-bottom:16px;
+  }
+  .balance-amount {
+    display:flex; align-items:baseline; gap:8px; margin-bottom:6px;
+  }
+  .balance-amount .num { font-size:32px; font-weight:bold; }
+  .balance-amount .cur { color:#848e9c; font-size:15px; }
+  .balance-usd { color:#848e9c; font-size:13px; margin-bottom:20px; }
+  .balance-actions { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .balance-actions button {
+    background:#1e2329; border:1px solid #2b3139; color:#eaecef;
+    padding:12px 0; border-radius:8px; font-weight:bold; font-size:14px; cursor:pointer;
+  }
+  .balance-actions .btn-primary {
+    background:#f0b90b;
+    color:#0b0e11;
+    border:1px solid #f0b90b;
+  }
+  .balance-actions .btn-secondary {
+    background:#2354b8;
+    color:#ffffff;
+    border:1px solid #2354b8;
+  }
+
+  .card { background:#161a1e; border-radius:12px; margin:16px; padding:20px; }
+  .row { display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid #1e2329; }
+  .row:last-child { border-bottom:none; }
+  .label { color:#848e9c; font-size:13px; }
+  .value { font-weight:bold; word-break:break-all; text-align:right; max-width:60%; }
+
+  .bottom-nav {
+    position:fixed; bottom:0; left:0; right:0; background:#161a1e;
+    display:flex; justify-content:space-around; padding:10px 0;
+    border-top:1px solid #2b3139;
+  }
+  .bottom-nav div { text-align:center; color:#848e9c; font-size:11px; cursor:pointer; }
+  .bottom-nav div.active { color:#f0b90b; }
+  .bottom-nav .ic {
+    font-size:18px; width:38px; height:38px; line-height:38px;
+    margin:0 auto 2px; border-radius:50%; transition:0.2s;
+  }
+  .bottom-nav div.active .ic {
+    background:rgba(240,185,11,0.15);
+    box-shadow:0 0 0 6px rgba(240,185,11,0.08);
+  }
+</style>
 </head>
 <body>
-  <!-- এখানে খালি Assets পেজের কন্টেন্ট থাকবে -->
+<header><h1>Assets</h1></header>
+
+<div class="balance-card">
+  <div class="balance-title">
+    Est. Total Value
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/>
+      <circle cx="12" cy="12" r="3"/>
+    </svg>
+  </div>
+  <div class="balance-amount">
+    <span class="num" id="balanceNum">0.00</span>
+    <span class="cur">USDT &#9662;</span>
+  </div>
+  <div class="balance-usd" id="balanceUsd">&#8776; $0.00</div>
+  <div class="balance-actions">
+    <button class="btn-primary" onclick="location.href='deposit.html'">Deposit</button>
+    <button class="btn-secondary" onclick="location.href='withdraw.html'">Withdraw</button>
+  </div>
+</div>
+
+<div class="card" id="assets-card">
+  <div class="row"><span class="label">Loading...</span></div>
+</div>
+
+<div class="bottom-nav">
+  <a href="market.html" style="text-decoration:none;"><div><div class="ic">&#128200;</div>Market</div></a>
+  <a href="trade.html" style="text-decoration:none;"><div><div class="ic">&#128179;</div>Trade</div></a>
+  <div class="active"><div class="ic">&#128188;</div>Assets</div>
+  <a href="profile.html" style="text-decoration:none;"><div><div class="ic">&#128100;</div>Profile</div></a>
+</div>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyDJoPr8RvE1xkNTKRr5kwTx6E51GCMn_HE",
+  authDomain: "abc-company-6272a.firebaseapp.com",
+  projectId: "abc-company-6272a",
+  storageBucket: "abc-company-6272a.firebasestorage.app",
+  messagingSenderId: "1026212780106",
+  appId: "1:1026212780106:web:985ec1bc35837d6320eeb3"
+};
+firebase.initializeApp(firebaseConfig);
+firebase.auth().onAuthStateChanged(async user => {
+  if (!user) {
+    window.location.href = 'login.html';
+    return;
+  }
+
+  // ---- Real-time balance listener ----
+  firebase.firestore().collection('users').doc(user.uid)
+    .onSnapshot(doc => {
+      if (doc.exists) {
+        const data = doc.data();
+        const balance = data.balance || 0;
+        document.getElementById('balanceNum').textContent = balance.toFixed(2);
+        document.getElementById('balanceUsd').textContent = `≈ $${balance.toFixed(2)}`;
+      }
+    });
+  // -------------------------------------
+
+  // ---- Asset breakdown (edit/add rows as your Firestore fields grow) ----
+  const card = document.getElementById('assets-card');
+  try {
+    const doc = await firebase.firestore().collection('users').doc(user.uid).get();
+    if (doc.exists) {
+      const data = doc.data();
+      const balance = (data.balance || 0).toFixed(2);
+      card.innerHTML = `
+        <div class="row"><span class="label">USDT</span><span class="value">${balance}</span></div>
+      `;
+    } else {
+      card.innerHTML = `<div class="row"><span class="label">No assets found</span></div>`;
+    }
+  } catch (e) {
+    card.innerHTML = `<div class="row"><span class="label">Failed to load assets</span></div>`;
+  }
+});
+</script>
 </body>
 </html>
