@@ -101,7 +101,7 @@
     Please do not send other types of assets to the above address. This action may result in the loss of your assets. After the transmission is successful, the network node needs to confirm receipt of the corresponding assets. After the transfer is successful, please contact online customer service for confirmation.
   </div>
 
-  <div class="amount-label" id="amount-label">আপনি কত জমা করেছেন?</div>
+  <div class="amount-label" id="amount-label">How much have you deposited?</div>
   <input type="number" class="amount-input" id="amount-input" placeholder="Enter deposit amount">
   <div class="amount-error" id="amount-error"></div>
 
@@ -121,8 +121,8 @@
 const depositAssets = [
   { symbol: 'BTC',  name: 'Bitcoin',   icon: 'btc',  network: 'Bitcoin (BTC)',       address: 'bc1q8sfwmlkqfpmeuu2elnpet95wahpg9f96vqr6x9' },
   { symbol: 'ETH',  name: 'Ethereum',  icon: 'eth',  network: 'Ethereum (ERC20)',    address: '0xAf26e02916bfbc0E49CE82A253988058259fe71E' },
-  { symbol: 'USDT', name: 'Tether',    icon: 'usdt', network: 'Ethereum (ERC20)',    address: '0xAf26e02916bfbc0E49CE82A253988058259fe71E' },
-  { symbol: 'USDC', name: 'USD Coin',  icon: 'usdc', network: 'Ethereum (ERC20)',    address: '0xAf26e02916bfbc0E49CE82A253988058259fe71E' },
+  { symbol: 'USDT', name: 'Tether',    icon: 'usdt', network: 'Ethereum ,            address: '0xAf26e02916bfbc0E49CE82A253988058259fe71E' },
+  { symbol: 'USDC', name: 'USD Coin',  icon: 'usdc', network: 'Ethereum ,            address: '0xAf26e02916bfbc0E49CE82A253988058259fe71E' },
   { symbol: 'SOL',  name: 'Solana',    icon: 'sol',  network: 'Solana',              address: 'Dt2h9YR127SM2kTiPS3keir1fqYN1qp9ZH2MNpAEHm6P' }
 ];
 
@@ -157,11 +157,11 @@ function selectAsset(a) {
   document.getElementById('copy-btn').classList.remove('copied');
   document.getElementById('copy-btn').textContent = 'Copy address';
   document.getElementById('copy-btn').dataset.address = a.address;
-  document.getElementById('amount-label').textContent = `আপনি কত ${a.symbol} জমা করেছেন?`;
+  document.getElementById('amount-label').textContent = `How much ${a.symbol} have you deposited?`;
   document.getElementById('amount-input').placeholder = `Enter deposit amount (${a.symbol})`;
   document.getElementById('amount-input').value = '';
   document.getElementById('amount-error').textContent = '';
-}
+});
 
 document.getElementById('copy-btn').addEventListener('click', function () {
   const address = this.dataset.address;
@@ -179,7 +179,7 @@ document.getElementById('upload-btn').addEventListener('click', () => {
   const errorEl = document.getElementById('amount-error');
   const amountVal = parseFloat(document.getElementById('amount-input').value);
   if (isNaN(amountVal) || amountVal <= 0) {
-    errorEl.textContent = 'দয়া করে জমাকৃত পরিমাণ লিখুন।';
+    errorEl.textContent = 'Please enter the deposit amount.';
     return;
   }
   errorEl.textContent = '';
@@ -190,7 +190,7 @@ document.getElementById('proof-input').addEventListener('change', function () {
   if (this.files && this.files.length > 0) {
     const amountVal = document.getElementById('amount-input').value;
     const statusEl = document.getElementById('proof-status');
-    statusEl.textContent = `${amountVal} ${currentAsset.symbol}-এর প্রমাণ জমা হয়েছে, আমরা শীঘ্রই যাচাই করে জানাবো।`;
+    statusEl.textContent = `Proof submitted for ${amountVal} ${currentAsset.symbol}. We will verify shortly.`;
     statusEl.classList.add('show');
   }
 });
