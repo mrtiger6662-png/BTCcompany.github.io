@@ -28,7 +28,7 @@
     padding:12px; border-radius:8px; font-weight:bold; cursor:pointer; margin-bottom:20px;
   }
   .copy-btn.copied { background:#f0b90b; color:#202630; }
-  .qr-wrap { display:flex; justify-content:center; margin-bottom:20px; }
+  .qr-wrap { display:flex; justify-content:center; margin-bottom:20px; position:relative; }
   .qr-wrap img { width:200px; height:200px; border-radius:8px; background:#fff; padding:8px; }
   .warning-box {
     background:#161a1e; border-radius:8px; padding:14px; color:#848e9c;
@@ -47,11 +47,16 @@
   }
   .upload-btn:disabled { opacity:0.5; cursor:not-allowed; }
   .proof-status {
-    text-align:center; font-size:13px; margin-top:12px; padding:10px;
-    border-radius:8px; display:none;
+    display:none;
+    position:absolute;
+    top:0; left:0; right:0; bottom:0;
+    align-items:center; justify-content:center;
+    text-align:center; font-size:16px; font-weight:bold;
+    padding:10px 16px; border-radius:8px;
+    background:rgba(11,14,17,0.9);
   }
-  .proof-status.show { display:block; background:rgba(14,203,129,0.12); color:#0ecb81; }
-  .proof-status.error { background:rgba(246,70,93,0.12); color:#f6465d; }
+  .proof-status.show { display:flex; color:#0ecb81; }
+  .proof-status.show.error { color:#f6465d; }
   .bottom-nav {
     position:fixed; bottom:0; left:0; right:0; background:#161a1e;
     display:flex; justify-content:space-around; padding:10px 0;
@@ -84,7 +89,10 @@
   <div class="address-box" id="address-box">-</div>
   <button class="copy-btn" id="copy-btn">Copy address</button>
 
-  <div class="qr-wrap"><img id="qr-img" src="" alt="QR code"></div>
+  <div class="qr-wrap">
+    <img id="qr-img" src="" alt="QR code">
+    <div class="proof-status" id="proof-status"></div>
+  </div>
 
   <div class="warning-box">
     Please do not send other types of assets to the above address. This action may result in the loss of your assets. After the transmission is successful, the network node needs to confirm receipt of the corresponding assets. After the transfer is successful, please contact online customer service for confirmation.
@@ -96,7 +104,6 @@
 
   <input type="file" id="proof-input" accept="image/*" style="display:none;">
   <button class="upload-btn" id="upload-btn">Upload Proof</button>
-  <div class="proof-status" id="proof-status"></div>
 </div>
 
 <div class="bottom-nav">
