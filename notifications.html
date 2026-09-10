@@ -18,6 +18,7 @@
     --red: #ea3943;
     --red-bg: rgba(234,57,67,0.12);
     --gold: #f0b90b;
+    --gold-bg: rgba(240,185,11,0.12);
   }
   *{ box-sizing: border-box; }
   body{
@@ -160,10 +161,15 @@
   .status{
     font-size:11.5px;
     font-weight:500;
+    padding:2px 8px;
+    border-radius:8px;
+    display:inline-block;
   }
-  .status.completed{ color:var(--text-dim); }
-  .status.success{ color:var(--green); }
-  .status.pending{ color:var(--gold); }
+  .status.completed{ color:var(--text-dim); background:transparent; padding:0; }
+  .status.success{ color:var(--green); background:var(--green-bg); }
+  .status.pending{ color:var(--gold); background:var(--gold-bg); }
+  .status.rejected{ color:var(--red); background:var(--red-bg); }
+  .status.error{ color:var(--red); background:var(--red-bg); }
 
   .amount{
     font-size:14.5px;
@@ -199,112 +205,210 @@
   </div>
 
   <div class="content" id="content">
-    <!-- content injected by JS -->
+    <div class="empty">Loading...</div>
   </div>
 
 </div>
 
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script>
-  // ---- Dummy data (matches the reference screenshot) ----
-  const trades = [
-    { pair:"ETHUSDT", time:"11 Sept 2026, 01:29", ref:"O2026091101291696076", amount:-100.00, status:"Completed" },
-    { pair:"ETHUSDT", time:"11 Sept 2026, 00:51", ref:"O2026091100514776074", amount:28.80,  status:"Completed" },
-    { pair:"ETHUSDT", time:"11 Sept 2026, 00:50", ref:"O2026091100500534162", amount:24.00,  status:"Completed" },
-    { pair:"ETHUSDT", time:"11 Sept 2026, 00:48", ref:"O2026091100482844589", amount:20.00,  status:"Completed" },
-  ];
+const firebaseConfig = {
+  apiKey: "AIzaSyDJoPr8RvE1xkNTKRr5kwTx6E51GCMn_HE",
+  authDomain: "abc-company-6272a.firebaseapp.com",
+  projectId: "abc-company-6272a",
+  storageBucket: "abc-company-6272a.firebasestorage.app",
+  messagingSenderId: "1026212780106",
+  appId: "1:1026212780106:web:985ec1bc35837d6320eeb3"
+};
+firebase.initializeApp(firebaseConfig);
 
-  const deposits = [
-    { title:"Deposit", time:"11 Sept 2026, 00:47", ref:"DLZXXOAwqI9f8TVQLFk4", amount:100.00, status:"Success" },
-  ];
+let trades = [];
+let deposits = [];
+let withdrawals = [];
+let currentTab = 'all';
 
-  const withdrawals = [
-    // empty in reference screenshot — shown as an empty state
-  ];
+// ---- Helpers (mirrors assets.html) ----
+function formatDate(ts) {
+  if (!ts || !ts.toDate) return '—';
+  const d = ts.toDate();
+  return d.toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' }) +
+    ', ' + d.toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' });
+}
 
-  function fmtSigned(n){
-    const sign = n >= 0 ? "+" : "-";
-    return `${sign}${Math.abs(n).toFixed(2)} USDT`;
+// Returns a sortable millisecond value from a Firestore Timestamp
+function sortTime(ts) {
+  if (!ts || !ts.toDate) return 0;
+  return ts.toDate().getTime();
+}
+
+function fmtSigned(n){
+  const sign = n >= 0 ? "+" : "-";
+  return `${sign}${Math.abs(n).toFixed(2)} USDT`;
+}
+
+function tradeStatusLabel(status) {
+  if (status === 'completed') return 'Completed';
+  if (status === 'pending') return 'Pending';
+  if (status === 'error') return 'Error';
+  return status;
+}
+
+function depositWithdrawStatus(status) {
+  if (status === 'approved') return { text: 'Success', cls: 'success' };
+  if (status === 'rejected') return { text: 'Rejected', cls: 'rejected' };
+  return { text: 'Pending', cls: 'pending' };
+}
+
+// ---- Row renderers ----
+function tradeRow(t){
+  const pending = t.status !== 'completed';
+  const positive = t.profit >= 0;
+  return `
+    <div class="row">
+      <div class="row-left">
+        <div class="row-title">${t.symbol}</div>
+        <div class="row-sub">${t.date}</div>
+        <div class="row-sub ref">Ref: ${t.serial}</div>
+      </div>
+      <div class="row-right">
+        ${pending
+          ? `<span class="status ${t.status}">${tradeStatusLabel(t.status)}</span>`
+          : `<span class="pill ${positive ? "pos" : "neg"}">${fmtSigned(t.profit)}</span><span class="status completed">${tradeStatusLabel(t.status)}</span>`
+        }
+      </div>
+    </div>`;
+}
+
+function depositRow(d){
+  const badge = depositWithdrawStatus(d.status);
+  return `
+    <div class="row">
+      <div class="row-left">
+        <div class="row-title">Deposit</div>
+        <div class="row-sub">${d.date}</div>
+        <div class="row-sub ref">Ref: ${d.serial}</div>
+      </div>
+      <div class="row-right">
+        <span class="amount">${d.amount.toFixed(2)} USDT</span>
+        <span class="status ${badge.cls}">${badge.text}</span>
+      </div>
+    </div>`;
+}
+
+function withdrawRow(w){
+  const badge = depositWithdrawStatus(w.status);
+  return `
+    <div class="row">
+      <div class="row-left">
+        <div class="row-title">Withdrawal</div>
+        <div class="row-sub">${w.date}</div>
+        <div class="row-sub ref">Ref: ${w.serial}</div>
+      </div>
+      <div class="row-right">
+        <span class="amount">-${w.amount.toFixed(2)} USDT</span>
+        <span class="status ${badge.cls}">${badge.text}</span>
+      </div>
+    </div>`;
+}
+
+function renderSection(label, rowsHtml){
+  if(!rowsHtml){
+    return `<div class="section-label">${label}</div><div class="card"><div class="empty">No activity yet</div></div>`;
+  }
+  return `<div class="section-label">${label}</div><div class="card">${rowsHtml}</div>`;
+}
+
+function render(tab){
+  currentTab = tab;
+  const el = document.getElementById("content");
+  let html = "";
+
+  if(tab === "all" || tab === "trades"){
+    html += renderSection("Recent Trades", trades.map(tradeRow).join(""));
+  }
+  if(tab === "all" || tab === "deposit"){
+    html += renderSection("Deposit", deposits.map(depositRow).join(""));
+  }
+  if(tab === "all" || tab === "withdraw"){
+    html += renderSection("Withdraw", withdrawals.map(withdrawRow).join(""));
   }
 
-  function tradeRow(t){
-    const positive = t.amount >= 0;
-    return `
-      <div class="row">
-        <div class="row-left">
-          <div class="row-title">${t.pair}</div>
-          <div class="row-sub">${t.time}</div>
-          <div class="row-sub ref">Ref: ${t.ref}</div>
-        </div>
-        <div class="row-right">
-          <span class="pill ${positive ? "pos" : "neg"}">${fmtSigned(t.amount)}</span>
-          <span class="status completed">${t.status}</span>
-        </div>
-      </div>`;
-  }
+  el.innerHTML = html;
+}
 
-  function depositRow(d){
-    return `
-      <div class="row">
-        <div class="row-left">
-          <div class="row-title">${d.title}</div>
-          <div class="row-sub">${d.time}</div>
-          <div class="row-sub ref">Ref: ${d.ref}</div>
-        </div>
-        <div class="row-right">
-          <span class="amount">${d.amount.toFixed(2)} USDT</span>
-          <span class="status success">${d.status}</span>
-        </div>
-      </div>`;
-  }
-
-  function withdrawRow(w){
-    return `
-      <div class="row">
-        <div class="row-left">
-          <div class="row-title">${w.title}</div>
-          <div class="row-sub">${w.time}</div>
-          <div class="row-sub ref">Ref: ${w.ref}</div>
-        </div>
-        <div class="row-right">
-          <span class="amount">-${w.amount.toFixed(2)} USDT</span>
-          <span class="status ${w.status.toLowerCase()}">${w.status}</span>
-        </div>
-      </div>`;
-  }
-
-  function renderSection(label, rowsHtml){
-    if(!rowsHtml){
-      return `<div class="section-label">${label}</div><div class="card"><div class="empty">No activity yet</div></div>`;
-    }
-    return `<div class="section-label">${label}</div><div class="card">${rowsHtml}</div>`;
-  }
-
-  function render(tab){
-    const el = document.getElementById("content");
-    let html = "";
-
-    if(tab === "all" || tab === "trades"){
-      html += renderSection("Recent Trades", trades.map(tradeRow).join(""));
-    }
-    if(tab === "all" || tab === "deposit"){
-      html += renderSection("Deposit", deposits.map(depositRow).join(""));
-    }
-    if(tab === "all" || tab === "withdraw"){
-      html += renderSection("Withdraw", withdrawals.map(withdrawRow).join(""));
-    }
-
-    el.innerHTML = html;
-  }
-
-  document.querySelectorAll(".tab").forEach(btn=>{
-    btn.addEventListener("click", ()=>{
-      document.querySelectorAll(".tab").forEach(b=>b.classList.remove("active"));
-      btn.classList.add("active");
-      render(btn.dataset.tab);
-    });
+document.querySelectorAll(".tab").forEach(btn=>{
+  btn.addEventListener("click", ()=>{
+    document.querySelectorAll(".tab").forEach(b=>b.classList.remove("active"));
+    btn.classList.add("active");
+    render(btn.dataset.tab);
   });
+});
 
-  render("all");
+// ---- Auth + live Firestore data (same collections/fields as assets.html) ----
+firebase.auth().onAuthStateChanged(user => {
+  if (!user) {
+    window.location.href = 'login.html';
+    return;
+  }
+
+  const db = firebase.firestore();
+
+  db.collection('trades')
+    .where('uid', '==', user.uid)
+    .onSnapshot(snap => {
+      trades = snap.docs.map(d => {
+        const data = d.data();
+        let profit = 0;
+        if (data.result === 'win') profit = data.expectedReturn || 0;
+        else if (data.result === 'lose') profit = -(data.amount || 0);
+        return {
+          symbol: data.symbol || '—',
+          profit: profit,
+          status: data.status || 'pending',
+          date: formatDate(data.createdAt),
+          _t: sortTime(data.createdAt),
+          serial: data.orderNumber || d.id
+        };
+      }).sort((a, b) => b._t - a._t);
+      render(currentTab);
+    }, () => {
+      document.getElementById('content').innerHTML = `<div class="empty">Failed to load activity</div>`;
+    });
+
+  db.collection('deposits')
+    .where('uid', '==', user.uid)
+    .onSnapshot(snap => {
+      deposits = snap.docs.map(d => {
+        const data = d.data();
+        return {
+          amount: data.claimedAmount || 0,
+          date: formatDate(data.createdAt || data.timestamp),
+          _t: sortTime(data.createdAt || data.timestamp),
+          serial: data.referenceId || data.txnId || d.id,
+          status: data.status || 'pending'
+        };
+      }).sort((a, b) => b._t - a._t);
+      render(currentTab);
+    });
+
+  db.collection('withdrawals')
+    .where('uid', '==', user.uid)
+    .onSnapshot(snap => {
+      withdrawals = snap.docs.map(d => {
+        const data = d.data();
+        return {
+          amount: data.amount || 0,
+          date: formatDate(data.createdAt || data.timestamp),
+          _t: sortTime(data.createdAt || data.timestamp),
+          serial: data.referenceId || data.txnId || d.id,
+          status: data.status || 'pending'
+        };
+      }).sort((a, b) => b._t - a._t);
+      render(currentTab);
+    });
+});
 </script>
 
 </body>
