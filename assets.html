@@ -140,16 +140,14 @@ firebase.auth().onAuthStateChanged(async user => {
   const card = document.getElementById('assets-card');
   const db = firebase.firestore();
 
-  // Keep the three pieces (balance, pending deposits, pending withdrawals)
-  // in separate variables and re-render whenever any one of them changes.
-  let currentBalance = 0;
+  // Keep pending deposits and pending withdrawals in separate variables
+  // and re-render whenever either one changes.
+  // (The plain USDT balance row is intentionally not shown on this page.)
   let pendingDepositTotal = 0;
   let pendingWithdrawalTotal = 0;
 
   function renderCard() {
-    let rows = `
-      <div class="row"><span class="label">USDT</span><span class="value">${currentBalance.toFixed(2)}</span></div>
-    `;
+    let rows = '';
 
     if (pendingDepositTotal > 0) {
       rows += `
@@ -159,6 +157,7 @@ firebase.auth().onAuthStateChanged(async user => {
         </div>
       `;
     }
+
     if (pendingWithdrawalTotal > 0) {
       rows += `
         <div class="row">
@@ -172,12 +171,6 @@ firebase.auth().onAuthStateChanged(async user => {
   }
 
   try {
-    // Balance: from the user document (unchanged)
-    db.collection('users').doc(user.uid).onSnapshot(doc => {
-      currentBalance = doc.exists ? (doc.data().balance || 0) : 0;
-      renderCard();
-    });
-
     // Pending deposits: sum every deposit doc for this user with status == "pending"
     // NOTE: field names must match exactly what deposit.html writes: uid + claimedAmount
     db.collection('deposits')
