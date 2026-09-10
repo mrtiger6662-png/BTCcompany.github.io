@@ -856,7 +856,8 @@ function resetTradeButtons() {
 document.getElementById('up-btn').addEventListener('click', () => placeTrade('up'));
 document.getElementById('down-btn').addEventListener('click', () => placeTrade('down'));
 
-loadTradeConfig().then(loadCoinList);
+loadCoinList();
+loadTradeConfig();
 </script>
 </body>
 </html>
