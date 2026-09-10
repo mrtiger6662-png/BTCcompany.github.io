@@ -150,6 +150,7 @@
     font-size:14px; cursor:pointer;
   }
   .tm-again-btn:active { background:#d9e4ff; }
+ 
 </style>
 </head>
 <body>
@@ -454,7 +455,7 @@ function iconUrl(icon) {
 }
 
 async function loadCoinList() {
-  listView.innerHTML = '<p style="text-align:center;color:#848e9c;padding:20px;">Loading...</p>';
+  listView.innerHTML = '<div class="welcome-loading"><span class="typing-text">Welcome Smart Trading</span></div>';
   try {
     const symbolsParam = encodeURIComponent(JSON.stringify(coinList.map(c => c.symbol)));
     const res = await fetch('https://api.binance.com/api/v3/ticker/24hr?symbols=' + symbolsParam);
