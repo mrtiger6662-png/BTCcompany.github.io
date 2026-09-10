@@ -140,23 +140,36 @@ firebase.auth().onAuthStateChanged(async user => {
   const card = document.getElementById('assets-card');
   const db = firebase.firestore();
 
-  // Keep pending deposits and pending withdrawals in separate variables
-  // and re-render whenever either one changes.
+  // Keep pending deposits (as a list, so each can show its own date/serial)
+  // and pending withdrawals total in separate variables, and re-render
+  // whenever either one changes.
   // (The plain USDT balance row is intentionally not shown on this page.)
-  let pendingDepositTotal = 0;
+  let pendingDeposits = []; // [{ amount, date, serial }]
   let pendingWithdrawalTotal = 0;
+
+  // Turns a Firestore Timestamp (or missing value) into "DD Mon YYYY, HH:MM"
+  function formatDate(ts) {
+    if (!ts || !ts.toDate) return '—';
+    const d = ts.toDate();
+    return d.toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' }) +
+      ', ' + d.toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' });
+  }
 
   function renderCard() {
     let rows = '';
 
-    if (pendingDepositTotal > 0) {
+    pendingDeposits.forEach(dep => {
       rows += `
         <div class="row">
-          <span class="label">Pending Deposit</span>
-          <span class="value">${pendingDepositTotal.toFixed(2)} USDT <span class="status-badge status-pending">Pending</span></span>
+          <span class="label">
+            Pending Deposit
+            <div style="margin-top:4px; font-size:12px; color:#5e6673;">${dep.date}</div>
+            <div style="margin-top:2px; font-size:12px; color:#5e6673;">Ref: ${dep.serial}</div>
+          </span>
+          <span class="value">${dep.amount.toFixed(2)} USDT <span class="status-badge status-pending">Pending</span></span>
         </div>
       `;
-    }
+    });
 
     if (pendingWithdrawalTotal > 0) {
       rows += `
@@ -171,13 +184,23 @@ firebase.auth().onAuthStateChanged(async user => {
   }
 
   try {
-    // Pending deposits: sum every deposit doc for this user with status == "pending"
-    // NOTE: field names must match exactly what deposit.html writes: uid + claimedAmount
+    // Pending deposits: one row per deposit doc for this user with status == "pending"
+    // NOTE: field names must match exactly what deposit.html writes: uid + claimedAmount.
+    // Date/time: tries "createdAt" first, then "timestamp" — update if your deposit.html
+    // uses a different field name for when the deposit was submitted.
+    // Serial/reference code: tries "referenceId" / "txnId", falls back to the Firestore doc ID.
     db.collection('deposits')
       .where('uid', '==', user.uid)
       .where('status', '==', 'pending')
       .onSnapshot(snap => {
-        pendingDepositTotal = snap.docs.reduce((sum, d) => sum + (d.data().claimedAmount || 0), 0);
+        pendingDeposits = snap.docs.map(d => {
+          const data = d.data();
+          return {
+            amount: data.claimedAmount || 0,
+            date: formatDate(data.createdAt || data.timestamp),
+            serial: data.referenceId || data.txnId || d.id
+          };
+        });
         renderCard();
       });
 
