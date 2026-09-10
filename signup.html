@@ -17,6 +17,7 @@
 <body>
 <div class="box">
   <h2>Create Account</h2>
+  <input type="text" id="fullname" placeholder="Full Name">
   <input type="text" id="phone" placeholder="Email or Phone number">
   <input type="password" id="password" placeholder="Password">
   <button onclick="signUp()">Sign Up</button>
@@ -51,11 +52,12 @@ async function getNextAccountId() {
 }
 
 function signUp() {
+  const fullName = document.getElementById('fullname').value.trim();
   const identifier = document.getElementById('phone').value.trim();
   const password = document.getElementById('password').value;
   const msg = document.getElementById('msg');
 
-  if (!identifier || !password) {
+  if (!fullName || !identifier || !password) {
     msg.style.color = 'red';
     msg.textContent = 'Please fill in all fields.';
     return;
@@ -63,11 +65,13 @@ function signUp() {
 
   const email = identifier.includes('@') ? identifier : identifier.replace(/\D/g,'') + '@abccompany-users.com';
 
-  firebase.auth().createUserWithEmailAndPassword(email, password)
+  firebase.auth().setPersistence(firebase.auth.Auth.Persistence.LOCAL)
+    .then(() => firebase.auth().createUserWithEmailAndPassword(email, password))
     .then(async userCredential => {
       const user = userCredential.user;
       const accountId = await getNextAccountId();
       return firebase.firestore().collection('users').doc(user.uid).set({
+        fullName: fullName,
         accountId: accountId,
         identifier: identifier,
         email: email,
