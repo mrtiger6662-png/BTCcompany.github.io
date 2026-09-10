@@ -27,6 +27,28 @@
   .change-up { color:#0ecb81; }
   .change-down { color:#f6465d; }
 
+  .skeleton-row {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:14px 16px; border-bottom:1px solid #1e2329;
+  }
+  .skeleton-left { display:flex; align-items:center; gap:10px; }
+  .skeleton-box {
+    background:linear-gradient(90deg, #1e2329 25%, #2b3139 50%, #1e2329 75%);
+    background-size:200% 100%;
+    animation:shimmer 1.4s infinite;
+    border-radius:4px;
+  }
+  .skeleton-icon { width:28px; height:28px; border-radius:50%; }
+  .skeleton-name { width:70px; height:14px; margin-bottom:6px; }
+  .skeleton-sub { width:50px; height:10px; }
+  .skeleton-price { width:60px; height:14px; margin-bottom:6px; margin-left:auto; }
+  .skeleton-change { width:40px; height:10px; margin-left:auto; }
+
+  @keyframes shimmer {
+    0% { background-position:200% 0; }
+    100% { background-position:-200% 0; }
+  }
+
   #chart-view { display:none; padding:16px; }
 
   .demo-banner {
