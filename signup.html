@@ -71,6 +71,7 @@ function signUp() {
         accountId: accountId,
         identifier: identifier,
         email: email,
+        balance: 0,
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
       });
     })
