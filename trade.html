@@ -473,9 +473,11 @@ function iconUrl(icon) {
 async function loadCoinList() {
   listView.innerHTML = '<div class="welcome-loading"><span class="typing-text">Welcome Smart Trading</span></div>';
   try {
+        const minDelay = new Promise(resolve => setTimeout(resolve, 2000));
     const symbolsParam = encodeURIComponent(JSON.stringify(coinList.map(c => c.symbol)));
-    const res = await fetch('https://api.binance.com/api/v3/ticker/24hr?symbols=' + symbolsParam);
-    const tickers = await res.json();
+    const fetchData = fetch('https://api.binance.com/api/v3/ticker/24hr?symbols=' + symbolsParam)
+      .then(res => res.json());
+    const [tickers] = await Promise.all([fetchData, minDelay]);
     listView.innerHTML = '';
 
     coinList.forEach(coin => {
