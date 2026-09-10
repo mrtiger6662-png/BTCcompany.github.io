@@ -3,54 +3,155 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Admin - Requests</title>
+<title>Admin Panel - ABC Company</title>
 <style>
   * { box-sizing:border-box; }
-  body { margin:0; font-family:Arial, sans-serif; background:#0b0e11; color:#eaecef; padding-bottom:40px; }
-  header { padding:16px 20px; text-align:center; }
+  body { margin:0; font-family:Arial, sans-serif; background:#0b0e11; color:#eaecef; }
+  header { padding:16px 20px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid #2b3139; }
   header h1 { font-size:18px; margin:0; color:#f0b90b; }
-  #access-denied { text-align:center; padding:40px 20px; color:#f6465d; }
-  .section-title { padding:20px 16px 10px; font-size:16px; font-weight:bold; color:#f0b90b; }
-  .list { padding:0 16px; }
-  .req-card { background:#161a1e; border-radius:12px; padding:16px; margin-bottom:14px; }
-  .req-top { display:flex; justify-content:space-between; font-size:13px; color:#848e9c; margin-bottom:8px; }
-  .req-amount { font-size:18px; font-weight:bold; color:#f0b90b; margin-bottom:10px; }
-  .req-card img.proof { width:100%; max-height:260px; object-fit:contain; border-radius:8px; background:#000; margin-bottom:12px; cursor:pointer; }
-  .req-detail { font-size:13px; color:#848e9c; margin-bottom:4px; word-break:break-all; }
-  .req-detail b { color:#eaecef; }
-  .credit-row { display:flex; gap:8px; margin-bottom:10px; }
-  .credit-row input {
-    flex:1; background:#1e2329; border:1px solid #2b3139; color:#eaecef;
-    padding:10px; border-radius:8px; font-size:14px;
+  .logout-btn { background:#f6465d; color:#fff; border:none; padding:8px 14px; border-radius:6px; font-weight:bold; cursor:pointer; font-size:12px; }
+
+  .tabs { display:flex; overflow-x:auto; border-bottom:1px solid #2b3139; background:#161a1e; }
+  .tabs button {
+    flex:1; min-width:90px; background:transparent; border:none; color:#848e9c;
+    padding:14px 8px; font-size:13px; font-weight:bold; cursor:pointer; border-bottom:2px solid transparent;
   }
-  .action-row { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:10px; }
-  .accept-btn, .reject-btn { padding:12px; border-radius:8px; font-weight:bold; cursor:pointer; border:none; }
-  .accept-btn { background:#0ecb81; color:#0b0e11; }
-  .reject-btn { background:#f6465d; color:#fff; }
-  .status-tag { font-size:12px; font-weight:bold; padding:3px 8px; border-radius:6px; }
-  .status-tag.approved { background:rgba(14,203,129,0.15); color:#0ecb81; }
-  .status-tag.rejected { background:rgba(246,70,93,0.15); color:#f6465d; }
-  .empty-msg { text-align:center; color:#848e9c; padding:30px; }
+  .tabs button.active { color:#f0b90b; border-bottom-color:#f0b90b; }
+
+  .panel { display:none; padding:16px; }
+  .panel.active { display:block; }
+
+  .toolbar { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
+  .refresh-btn {
+    background:#1e2329; border:1px solid #2b3139; color:#eaecef; padding:8px 14px;
+    border-radius:6px; cursor:pointer; font-size:12px;
+  }
+  .count-label { color:#848e9c; font-size:12px; }
+
+  table { width:100%; border-collapse:collapse; font-size:12.5px; }
+  th, td { padding:10px 8px; text-align:left; border-bottom:1px solid #1e2329; vertical-align:middle; }
+  th { color:#848e9c; font-size:11px; text-transform:uppercase; }
+  tr:hover { background:#12161b; }
+
+  .badge { padding:3px 8px; border-radius:10px; font-size:11px; font-weight:bold; display:inline-block; }
+  .badge-pending { background:rgba(240,185,11,0.15); color:#f0b90b; }
+  .badge-completed, .badge-approved, .badge-win { background:rgba(14,203,129,0.15); color:#0ecb81; }
+  .badge-rejected, .badge-lose, .badge-error { background:rgba(246,70,93,0.15); color:#f6465d; }
+  .badge-tie { background:rgba(132,142,156,0.15); color:#848e9c; }
+
+  .mini-input {
+    width:90px; background:#1e2329; border:1px solid #2b3139; color:#eaecef;
+    padding:6px 8px; border-radius:6px; font-size:12px;
+  }
+  .btn { border:none; padding:7px 12px; border-radius:6px; font-size:11.5px; font-weight:bold; cursor:pointer; margin:2px; }
+  .btn-win, .btn-approve, .btn-save { background:#0ecb81; color:#04150e; }
+  .btn-lose, .btn-reject { background:#f6465d; color:#fff; }
+  .btn-neutral { background:#1e2329; border:1px solid #2b3139; color:#eaecef; }
+  .btn:disabled { opacity:0.35; cursor:not-allowed; }
+
+  .proof-link { color:#f0b90b; text-decoration:underline; font-size:11.5px; }
+
+  .settings-card { background:#161a1e; border-radius:10px; padding:14px; margin-bottom:12px; }
+  .settings-row { display:grid; grid-template-columns:70px 1fr 1fr 1fr 1fr; gap:8px; align-items:center; margin-bottom:10px; }
+  .settings-row label { font-size:10.5px; color:#848e9c; display:block; margin-bottom:3px; }
+  .settings-row input { width:100%; background:#1e2329; border:1px solid #2b3139; color:#eaecef; padding:6px; border-radius:5px; font-size:12px; }
+
+  .gate { display:flex; align-items:center; justify-content:center; height:100vh; flex-direction:column; gap:12px; text-align:center; padding:20px; }
+  .gate h2 { color:#f6465d; margin:0; }
+  .gate p { color:#848e9c; font-size:13px; max-width:320px; }
+
+  .empty-msg { text-align:center; color:#848e9c; padding:30px; font-size:13px; }
 </style>
 </head>
 <body>
 
-<header><h1>Requests (Admin)</h1></header>
+<div id="gate-view" class="gate" style="display:none;">
+  <h2>Access denied</h2>
+  <p id="gate-msg">This account is not authorized to view the admin panel.</p>
+  <button class="logout-btn" onclick="firebase.auth().signOut().then(()=>window.location.href='login.html')">Log Out</button>
+</div>
 
-<div id="access-denied" style="display:none;">You do not have access to this page.</div>
+<div id="admin-view" style="display:none;">
+  <header>
+    <h1>Admin Panel</h1>
+    <button class="logout-btn" onclick="firebase.auth().signOut().then(()=>window.location.href='login.html')">Log Out</button>
+  </header>
 
-<div id="main-content" style="display:none;">
-  <div class="section-title">Deposit Requests</div>
-  <div class="list" id="deposit-list"></div>
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="users">Users</button>
+    <button class="tab-btn" data-tab="trades">Trades</button>
+    <button class="tab-btn" data-tab="deposits">Deposits</button>
+    <button class="tab-btn" data-tab="withdrawals">Withdrawals</button>
+    <button class="tab-btn" data-tab="settings">Settings</button>
+  </div>
 
-  <div class="section-title">Withdrawal Requests</div>
-  <div class="list" id="withdrawal-list"></div>
+  <!-- USERS -->
+  <div class="panel active" id="panel-users">
+    <div class="toolbar">
+      <span class="count-label" id="users-count"></span>
+      <button class="refresh-btn" onclick="loadUsers()">Refresh</button>
+    </div>
+    <table>
+      <thead><tr><th>Email</th><th>UID</th><th>Balance (USDT)</th><th>New Balance</th><th></th></tr></thead>
+      <tbody id="users-tbody"></tbody>
+    </table>
+  </div>
+
+  <!-- TRADES -->
+  <div class="panel" id="panel-trades">
+    <div class="toolbar">
+      <span class="count-label" id="trades-count"></span>
+      <button class="refresh-btn" onclick="loadTrades()">Refresh</button>
+    </div>
+    <table>
+      <thead><tr><th>User</th><th>Symbol</th><th>Dir</th><th>Amount</th><th>Duration</th><th>Status</th><th>Result</th><th>Force</th></tr></thead>
+      <tbody id="trades-tbody"></tbody>
+    </table>
+  </div>
+
+  <!-- DEPOSITS -->
+  <div class="panel" id="panel-deposits">
+    <div class="toolbar">
+      <span class="count-label" id="deposits-count"></span>
+      <button class="refresh-btn" onclick="loadDeposits()">Refresh</button>
+    </div>
+    <table>
+      <thead><tr><th>User</th><th>Coin</th><th>Claimed</th><th>Proof</th><th>Status</th><th>Credit USDT</th><th>Action</th></tr></thead>
+      <tbody id="deposits-tbody"></tbody>
+    </table>
+  </div>
+
+  <!-- WITHDRAWALS -->
+  <div class="panel" id="panel-withdrawals">
+    <div class="toolbar">
+      <span class="count-label" id="withdrawals-count"></span>
+      <button class="refresh-btn" onclick="loadWithdrawals()">Refresh</button>
+    </div>
+    <table>
+      <thead><tr><th>User</th><th>Coin</th><th>Amount</th><th>Net</th><th>Address</th><th>Status</th><th>Action</th></tr></thead>
+      <tbody id="withdrawals-tbody"></tbody>
+    </table>
+  </div>
+
+  <!-- SETTINGS -->
+  <div class="panel" id="panel-settings">
+    <div class="toolbar">
+      <span class="count-label">Trade duration &amp; return % (used by trade.html)</span>
+      <button class="refresh-btn" onclick="loadSettings()">Refresh</button>
+    </div>
+    <div id="settings-container"></div>
+    <button class="btn btn-save" onclick="saveSettings()">Save Settings</button>
+    <span id="settings-status" style="margin-left:10px;font-size:12px;color:#0ecb81;"></span>
+  </div>
 </div>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script>
+// ⚠️ CHANGE THIS to the exact email you will log in with to access the admin panel.
+const ADMIN_EMAIL = "admin@example.com";
+
 const firebaseConfig = {
   apiKey: "AIzaSyDJoPr8RvE1xkNTKRr5kwTx6E51GCMn_HE",
   authDomain: "abc-company-6272a.firebaseapp.com",
@@ -60,156 +161,298 @@ const firebaseConfig = {
   appId: "1:1026212780106:web:985ec1bc35837d6320eeb3"
 };
 firebase.initializeApp(firebaseConfig);
-
-const ADMIN_EMAIL = 'mrtiger6662@gmail.com';
+const db = firebase.firestore();
 
 firebase.auth().onAuthStateChanged(user => {
-  if (!user) { window.location.href = 'login.html'; return; }
-  if (user.email !== ADMIN_EMAIL) {
-    document.getElementById('access-denied').style.display = 'block';
+  if (!user) {
+    window.location.href = 'login.html';
     return;
   }
-  document.getElementById('main-content').style.display = 'block';
-  loadDeposits();
-  loadWithdrawals();
+  if ((user.email || '').toLowerCase() !== ADMIN_EMAIL.toLowerCase()) {
+    document.getElementById('gate-view').style.display = 'flex';
+    return;
+  }
+  document.getElementById('admin-view').style.display = 'block';
+  loadUsers();
 });
 
-// ---------- Deposits ----------
-async function loadDeposits() {
-  const listEl = document.getElementById('deposit-list');
-  listEl.innerHTML = '<p class="empty-msg">Loading...</p>';
-
-  const snapshot = await firebase.firestore().collection('deposits').orderBy('createdAt', 'desc').get();
-  if (snapshot.empty) {
-    listEl.innerHTML = '<p class="empty-msg">No deposit requests yet.</p>';
-    return;
-  }
-
-  listEl.innerHTML = '';
-  snapshot.forEach(doc => {
-    const d = doc.data();
-    const card = document.createElement('div');
-    card.className = 'req-card';
-
-    let actionsHtml = '';
-    if (d.status === 'pending') {
-      actionsHtml = `
-        <div class="credit-row">
-          <input type="number" placeholder="USDT to credit" id="credit-${doc.id}">
-        </div>
-        <div class="action-row">
-          <button class="accept-btn" data-id="${doc.id}" data-uid="${d.uid}">Accept</button>
-          <button class="reject-btn" data-id="${doc.id}" data-type="deposit">Reject</button>
-        </div>`;
-    } else {
-      const cls = d.status === 'approved' ? 'approved' : 'rejected';
-      const extra = d.status === 'approved' ? ` (+${d.creditedUSDT} USDT)` : '';
-      actionsHtml = `<span class="status-tag ${cls}">${d.status.toUpperCase()}${extra}</span>`;
-    }
-
-    card.innerHTML = `
-      <div class="req-top">
-        <span>${d.userEmail || d.uid}</span>
-        <span>${d.createdAt ? d.createdAt.toDate().toLocaleString() : ''}</span>
-      </div>
-      <div class="req-amount">${d.claimedAmount} ${d.symbol}</div>
-      <img class="proof" src="${d.proofUrl}" onclick="window.open('${d.proofUrl}','_blank')">
-      ${actionsHtml}
-    `;
-    listEl.appendChild(card);
+// ---------- Tabs ----------
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('panel-' + btn.dataset.tab).classList.add('active');
+    if (btn.dataset.tab === 'trades') loadTrades();
+    if (btn.dataset.tab === 'deposits') loadDeposits();
+    if (btn.dataset.tab === 'withdrawals') loadWithdrawals();
+    if (btn.dataset.tab === 'settings') loadSettings();
   });
+});
 
-  document.querySelectorAll('#deposit-list .accept-btn').forEach(btn => {
-    btn.addEventListener('click', () => acceptDeposit(btn.dataset.id, btn.dataset.uid));
-  });
-  document.querySelectorAll('#deposit-list .reject-btn').forEach(btn => {
-    btn.addEventListener('click', () => rejectDeposit(btn.dataset.id));
-  });
+function fmtDate(ts) {
+  if (!ts || !ts.toDate) return '-';
+  return ts.toDate().toLocaleString();
 }
 
-async function acceptDeposit(depositId, uid) {
-  const input = document.getElementById('credit-' + depositId);
-  const creditVal = parseFloat(input.value);
-  if (isNaN(creditVal) || creditVal <= 0) {
-    alert('Please enter a valid USDT amount to credit.');
-    return;
+// ================= USERS =================
+async function loadUsers() {
+  const tbody = document.getElementById('users-tbody');
+  tbody.innerHTML = '<tr><td colspan="5" class="empty-msg">Loading...</td></tr>';
+  try {
+    const snap = await db.collection('users').get();
+    document.getElementById('users-count').textContent = snap.size + ' users';
+    if (snap.empty) { tbody.innerHTML = '<tr><td colspan="5" class="empty-msg">No users found.</td></tr>'; return; }
+    tbody.innerHTML = '';
+    snap.forEach(doc => {
+      const d = doc.data();
+      const balance = (d.balance || 0).toFixed(2);
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${d.identifier || d.email || '-'}</td>
+        <td style="font-size:10px;color:#5b6169;word-break:break-all;">${doc.id}</td>
+        <td>${balance}</td>
+        <td><input type="number" class="mini-input" placeholder="${balance}" id="bal-${doc.id}"></td>
+        <td><button class="btn btn-save" onclick="saveUserBalance('${doc.id}')">Save</button></td>
+      `;
+      tbody.appendChild(tr);
+    });
+  } catch (e) {
+    tbody.innerHTML = `<tr><td colspan="5" class="empty-msg">Failed to load: ${e.message}</td></tr>`;
   }
-  await firebase.firestore().collection('deposits').doc(depositId).update({
-    status: 'approved', creditedUSDT: creditVal
-  });
-  await firebase.firestore().collection('users').doc(uid).set({
-    balance: firebase.firestore.FieldValue.increment(creditVal)
-  }, { merge: true });
-  loadDeposits();
+}
+
+async function saveUserBalance(uid) {
+  const input = document.getElementById('bal-' + uid);
+  const val = parseFloat(input.value);
+  if (isNaN(val)) { alert('Enter a valid number.'); return; }
+  try {
+    await db.collection('users').doc(uid).update({ balance: val });
+    loadUsers();
+  } catch (e) {
+    alert('Failed: ' + e.message);
+  }
+}
+
+// ================= TRADES =================
+async function loadTrades() {
+  const tbody = document.getElementById('trades-tbody');
+  tbody.innerHTML = '<tr><td colspan="8" class="empty-msg">Loading...</td></tr>';
+  try {
+    const snap = await db.collection('trades').orderBy('createdAt', 'desc').limit(100).get();
+    document.getElementById('trades-count').textContent = snap.size + ' trades (latest 100)';
+    if (snap.empty) { tbody.innerHTML = '<tr><td colspan="8" class="empty-msg">No trades yet.</td></tr>'; return; }
+    tbody.innerHTML = '';
+    snap.forEach(doc => {
+      const d = doc.data();
+      const isPending = d.status === 'pending';
+      const resultBadge = d.result
+        ? `<span class="badge badge-${d.result}">${d.result}</span>`
+        : (d.forcedResult ? `<span class="badge badge-pending">forcing: ${d.forcedResult}</span>` : '-');
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${d.userEmail || '-'}</td>
+        <td>${d.symbol || '-'}</td>
+        <td style="color:${d.direction==='up'?'#0ecb81':'#f6465d'};font-weight:bold;">${d.direction || '-'}</td>
+        <td>${(d.amount||0).toFixed(0)}</td>
+        <td>${d.durationSeconds || '-'}s</td>
+        <td><span class="badge badge-${d.status}">${d.status}</span></td>
+        <td>${resultBadge}</td>
+        <td>
+          <button class="btn btn-win" ${isPending ? '' : 'disabled'} onclick="forceTrade('${doc.id}','win')">Force Win</button>
+          <button class="btn btn-lose" ${isPending ? '' : 'disabled'} onclick="forceTrade('${doc.id}','lose')">Force Lose</button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+  } catch (e) {
+    tbody.innerHTML = `<tr><td colspan="8" class="empty-msg">Failed to load: ${e.message}</td></tr>`;
+  }
+}
+
+async function forceTrade(tradeId, outcome) {
+  try {
+    await db.collection('trades').doc(tradeId).update({ forcedResult: outcome });
+    loadTrades();
+  } catch (e) {
+    alert('Failed: ' + e.message);
+  }
+}
+
+// ================= DEPOSITS =================
+async function loadDeposits() {
+  const tbody = document.getElementById('deposits-tbody');
+  tbody.innerHTML = '<tr><td colspan="7" class="empty-msg">Loading...</td></tr>';
+  try {
+    const snap = await db.collection('deposits').orderBy('createdAt', 'desc').limit(100).get();
+    document.getElementById('deposits-count').textContent = snap.size + ' deposits (latest 100)';
+    if (snap.empty) { tbody.innerHTML = '<tr><td colspan="7" class="empty-msg">No deposits yet.</td></tr>'; return; }
+    tbody.innerHTML = '';
+    snap.forEach(doc => {
+      const d = doc.data();
+      const isPending = d.status === 'pending';
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${d.userEmail || '-'}</td>
+        <td>${d.symbol || '-'}</td>
+        <td>${d.claimedAmount || 0}</td>
+        <td>${d.proofUrl ? `<a class="proof-link" href="${d.proofUrl}" target="_blank">View</a>` : '-'}</td>
+        <td><span class="badge badge-${d.status}">${d.status}</span></td>
+        <td><input type="number" class="mini-input" placeholder="${d.claimedAmount || 0}" id="dep-${doc.id}" ${isPending ? '' : 'disabled'}></td>
+        <td>
+          <button class="btn btn-approve" ${isPending ? '' : 'disabled'} onclick="approveDeposit('${doc.id}','${d.uid}')">Approve</button>
+          <button class="btn btn-reject" ${isPending ? '' : 'disabled'} onclick="rejectDeposit('${doc.id}')">Reject</button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+  } catch (e) {
+    tbody.innerHTML = `<tr><td colspan="7" class="empty-msg">Failed to load: ${e.message}</td></tr>`;
+  }
+}
+
+async function approveDeposit(depositId, uid) {
+  const input = document.getElementById('dep-' + depositId);
+  const amount = parseFloat(input.value) || parseFloat(input.placeholder) || 0;
+  if (amount <= 0) { alert('Enter a valid credited amount.'); return; }
+  try {
+    await db.collection('users').doc(uid).set({
+      balance: firebase.firestore.FieldValue.increment(amount)
+    }, { merge: true });
+    await db.collection('deposits').doc(depositId).update({
+      status: 'approved',
+      creditedUSDT: amount
+    });
+    loadDeposits();
+  } catch (e) {
+    alert('Failed: ' + e.message);
+  }
 }
 
 async function rejectDeposit(depositId) {
-  await firebase.firestore().collection('deposits').doc(depositId).update({ status: 'rejected' });
-  loadDeposits();
-}
-
-// ---------- Withdrawals ----------
-async function loadWithdrawals() {
-  const listEl = document.getElementById('withdrawal-list');
-  listEl.innerHTML = '<p class="empty-msg">Loading...</p>';
-
-  const snapshot = await firebase.firestore().collection('withdrawals').orderBy('createdAt', 'desc').get();
-  if (snapshot.empty) {
-    listEl.innerHTML = '<p class="empty-msg">No withdrawal requests yet.</p>';
-    return;
+  try {
+    await db.collection('deposits').doc(depositId).update({ status: 'rejected' });
+    loadDeposits();
+  } catch (e) {
+    alert('Failed: ' + e.message);
   }
+}
 
-  listEl.innerHTML = '';
-  snapshot.forEach(doc => {
-    const d = doc.data();
-    const card = document.createElement('div');
-    card.className = 'req-card';
+// ================= WITHDRAWALS =================
+async function loadWithdrawals() {
+  const tbody = document.getElementById('withdrawals-tbody');
+  tbody.innerHTML = '<tr><td colspan="7" class="empty-msg">Loading...</td></tr>';
+  try {
+    const snap = await db.collection('withdrawals').orderBy('createdAt', 'desc').limit(100).get();
+    document.getElementById('withdrawals-count').textContent = snap.size + ' withdrawals (latest 100)';
+    if (snap.empty) { tbody.innerHTML = '<tr><td colspan="7" class="empty-msg">No withdrawals yet.</td></tr>'; return; }
+    tbody.innerHTML = '';
+    snap.forEach(doc => {
+      const d = doc.data();
+      const isPending = d.status === 'pending';
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${d.userEmail || '-'}</td>
+        <td>${d.symbol || '-'}</td>
+        <td>${(d.amount||0).toFixed(2)}</td>
+        <td>${(d.netAmount||0).toFixed(2)}</td>
+        <td style="font-size:10px;word-break:break-all;">${d.address || '-'}</td>
+        <td><span class="badge badge-${d.status}">${d.status}</span></td>
+        <td>
+          <button class="btn btn-approve" ${isPending ? '' : 'disabled'} onclick="approveWithdrawal('${doc.id}')">Approve</button>
+          <button class="btn btn-reject" ${isPending ? '' : 'disabled'} onclick="rejectWithdrawal('${doc.id}','${d.uid}',${d.amount||0})">Reject &amp; Refund</button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+  } catch (e) {
+    tbody.innerHTML = `<tr><td colspan="7" class="empty-msg">Failed to load: ${e.message}</td></tr>`;
+  }
+}
 
-    let actionsHtml = '';
-    if (d.status === 'pending') {
-      actionsHtml = `
-        <div class="action-row">
-          <button class="accept-btn" data-id="${doc.id}">Mark Sent</button>
-          <button class="reject-btn" data-id="${doc.id}" data-uid="${d.uid}" data-amount="${d.amount}">Reject & Refund</button>
-        </div>`;
+async function approveWithdrawal(withdrawalId) {
+  try {
+    await db.collection('withdrawals').doc(withdrawalId).update({ status: 'approved' });
+    loadWithdrawals();
+  } catch (e) {
+    alert('Failed: ' + e.message);
+  }
+}
+
+async function rejectWithdrawal(withdrawalId, uid, amount) {
+  try {
+    // Refund the originally-deducted amount back to the user's balance
+    await db.collection('users').doc(uid).set({
+      balance: firebase.firestore.FieldValue.increment(amount)
+    }, { merge: true });
+    await db.collection('withdrawals').doc(withdrawalId).update({ status: 'rejected' });
+    loadWithdrawals();
+  } catch (e) {
+    alert('Failed: ' + e.message);
+  }
+}
+
+// ================= SETTINGS =================
+async function loadSettings() {
+  const container = document.getElementById('settings-container');
+  container.innerHTML = '<div class="empty-msg">Loading...</div>';
+  try {
+    const doc = await db.collection('settings').doc('tradeConfig').get();
+    let durations;
+    if (doc.exists && Array.isArray(doc.data().durations)) {
+      durations = doc.data().durations;
     } else {
-      const cls = d.status === 'approved' ? 'approved' : 'rejected';
-      actionsHtml = `<span class="status-tag ${cls}">${d.status.toUpperCase()}</span>`;
+      durations = [
+        { seconds: 60,  returnPct: 20.00, min: 100,    max: 9999,    step: 100   },
+        { seconds: 120, returnPct: 25.00, min: 10000,  max: 49999,   step: 1000  },
+        { seconds: 180, returnPct: 30.00, min: 50000,  max: 99999,   step: 1000  },
+        { seconds: 300, returnPct: 50.00, min: 100000, max: 5000000, step: 10000 },
+        { seconds: 600, returnPct: 85.00, min: 100000, max: null,    step: 10000 }
+      ];
     }
-
-    card.innerHTML = `
-      <div class="req-top">
-        <span>${d.userEmail || d.uid}</span>
-        <span>${d.createdAt ? d.createdAt.toDate().toLocaleString() : ''}</span>
-      </div>
-      <div class="req-amount">$${d.amount} (${d.symbol})</div>
-      <div class="req-detail">Fee (2%): <b>$${d.feeAmount.toFixed(2)}</b></div>
-      <div class="req-detail">Net to send: <b>$${d.netAmount.toFixed(2)}</b></div>
-      <div class="req-detail">Address: <b>${d.address}</b></div>
-      ${actionsHtml}
-    `;
-    listEl.appendChild(card);
-  });
-
-  document.querySelectorAll('#withdrawal-list .accept-btn').forEach(btn => {
-    btn.addEventListener('click', () => markWithdrawalSent(btn.dataset.id));
-  });
-  document.querySelectorAll('#withdrawal-list .reject-btn').forEach(btn => {
-    btn.addEventListener('click', () => rejectWithdrawal(btn.dataset.id, btn.dataset.uid, parseFloat(btn.dataset.amount)));
-  });
+    container.innerHTML = '';
+    durations.forEach((d, i) => {
+      const row = document.createElement('div');
+      row.className = 'settings-card';
+      row.innerHTML = `
+        <div class="settings-row">
+          <div><label>Seconds</label><input type="number" id="s-sec-${i}" value="${d.seconds}"></div>
+          <div><label>Return %</label><input type="number" step="0.01" id="s-ret-${i}" value="${d.returnPct}"></div>
+          <div><label>Min amount</label><input type="number" id="s-min-${i}" value="${d.min}"></div>
+          <div><label>Max amount (blank = no limit)</label><input type="number" id="s-max-${i}" value="${d.max===null||d.max===undefined?'':d.max}"></div>
+          <div><label>Step</label><input type="number" id="s-step-${i}" value="${d.step}"></div>
+        </div>
+      `;
+      container.appendChild(row);
+    });
+    container.dataset.count = durations.length;
+  } catch (e) {
+    container.innerHTML = `<div class="empty-msg">Failed to load: ${e.message}</div>`;
+  }
 }
 
-async function markWithdrawalSent(id) {
-  await firebase.firestore().collection('withdrawals').doc(id).update({ status: 'approved' });
-  loadWithdrawals();
-}
-
-async function rejectWithdrawal(id, uid, amount) {
-  await firebase.firestore().collection('withdrawals').doc(id).update({ status: 'rejected' });
-  await firebase.firestore().collection('users').doc(uid).set({
-    balance: firebase.firestore.FieldValue.increment(amount)
-  }, { merge: true });
-  loadWithdrawals();
+async function saveSettings() {
+  const container = document.getElementById('settings-container');
+  const count = parseInt(container.dataset.count || '0');
+  const durations = [];
+  for (let i = 0; i < count; i++) {
+    const maxRaw = document.getElementById('s-max-' + i).value;
+    durations.push({
+      seconds: parseInt(document.getElementById('s-sec-' + i).value) || 0,
+      returnPct: parseFloat(document.getElementById('s-ret-' + i).value) || 0,
+      min: parseFloat(document.getElementById('s-min-' + i).value) || 0,
+      max: maxRaw === '' ? null : parseFloat(maxRaw),
+      step: parseFloat(document.getElementById('s-step-' + i).value) || 1
+    });
+  }
+  try {
+    await db.collection('settings').doc('tradeConfig').set({ durations });
+    const statusEl = document.getElementById('settings-status');
+    statusEl.textContent = 'Saved!';
+    setTimeout(() => statusEl.textContent = '', 2000);
+  } catch (e) {
+    alert('Failed to save: ' + e.message);
+  }
 }
 </script>
 </body>
