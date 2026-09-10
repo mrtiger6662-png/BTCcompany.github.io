@@ -140,10 +140,10 @@ firebase.auth().onAuthStateChanged(async user => {
   const card = document.getElementById('assets-card');
   const db = firebase.firestore();
 
-  // Keep the balance and pending withdrawals in separate variables
-  // and re-render whenever either one changes.
-  // (Pending deposits are intentionally not shown on this page anymore.)
+  // Keep the three pieces (balance, pending deposits, pending withdrawals)
+  // in separate variables and re-render whenever any one of them changes.
   let currentBalance = 0;
+  let pendingDepositTotal = 0;
   let pendingWithdrawalTotal = 0;
 
   function renderCard() {
@@ -151,6 +151,14 @@ firebase.auth().onAuthStateChanged(async user => {
       <div class="row"><span class="label">USDT</span><span class="value">${currentBalance.toFixed(2)}</span></div>
     `;
 
+    if (pendingDepositTotal > 0) {
+      rows += `
+        <div class="row">
+          <span class="label">Pending Deposit</span>
+          <span class="value">${pendingDepositTotal.toFixed(2)} USDT <span class="status-badge status-pending">Pending</span></span>
+        </div>
+      `;
+    }
     if (pendingWithdrawalTotal > 0) {
       rows += `
         <div class="row">
@@ -169,6 +177,16 @@ firebase.auth().onAuthStateChanged(async user => {
       currentBalance = doc.exists ? (doc.data().balance || 0) : 0;
       renderCard();
     });
+
+    // Pending deposits: sum every deposit doc for this user with status == "pending"
+    // NOTE: field names must match exactly what deposit.html writes: uid + claimedAmount
+    db.collection('deposits')
+      .where('uid', '==', user.uid)
+      .where('status', '==', 'pending')
+      .onSnapshot(snap => {
+        pendingDepositTotal = snap.docs.reduce((sum, d) => sum + (d.data().claimedAmount || 0), 0);
+        renderCard();
+      });
 
     // Pending withdrawals: sum every withdrawal doc for this user with status == "pending"
     // NOTE: confirm withdrawal.html uses the same field names (uid + claimedAmount) —
