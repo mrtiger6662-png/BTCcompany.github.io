@@ -140,11 +140,11 @@ firebase.auth().onAuthStateChanged(async user => {
   const card = document.getElementById('assets-card');
   const db = firebase.firestore();
 
-  // Keep pending deposits (as a list, so each can show its own date/serial)
-  // and pending withdrawals total in separate variables, and re-render
-  // whenever either one changes.
+  // Keep all deposits (pending/approved/rejected) as a list, so each can
+  // show its own date/serial/status, and pending withdrawals total in a
+  // separate variable. Re-render whenever either one changes.
   // (The plain USDT balance row is intentionally not shown on this page.)
-  let pendingDeposits = []; // [{ amount, date, serial }]
+  let deposits = []; // [{ amount, date, serial, status }]
   let pendingWithdrawalTotal = 0;
 
   // Turns a Firestore Timestamp (or missing value) into "DD Mon YYYY, HH:MM"
@@ -155,18 +155,28 @@ firebase.auth().onAuthStateChanged(async user => {
       ', ' + d.toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' });
   }
 
+  // Maps a deposit's Firestore status to what the badge should show.
+  // NOTE: assumes the admin panel writes status as "pending" / "approved" / "rejected".
+  // If your admin panel uses different words, update the keys below to match.
+  function statusBadge(status) {
+    if (status === 'approved') return { text: 'Success', cls: 'status-approved' };
+    if (status === 'rejected') return { text: 'Reject', cls: 'status-rejected' };
+    return { text: 'Pending', cls: 'status-pending' };
+  }
+
   function renderCard() {
     let rows = '';
 
-    pendingDeposits.forEach(dep => {
+    deposits.forEach(dep => {
+      const badge = statusBadge(dep.status);
       rows += `
         <div class="row">
           <span class="label">
-            Pending Deposit
+            Deposit
             <div style="margin-top:4px; font-size:12px; color:#5e6673;">${dep.date}</div>
             <div style="margin-top:2px; font-size:12px; color:#5e6673;">Ref: ${dep.serial}</div>
           </span>
-          <span class="value">${dep.amount.toFixed(2)} USDT <span class="status-badge status-pending">Pending</span></span>
+          <span class="value">${dep.amount.toFixed(2)} USDT <span class="status-badge ${badge.cls}">${badge.text}</span></span>
         </div>
       `;
     });
@@ -184,23 +194,24 @@ firebase.auth().onAuthStateChanged(async user => {
   }
 
   try {
-    // Pending deposits: one row per deposit doc for this user with status == "pending"
+    // All deposits for this user — no status filter, so approved/rejected
+    // ones stay visible too, not just pending ones. Newest first.
     // NOTE: field names must match exactly what deposit.html writes: uid + claimedAmount.
     // Date/time: tries "createdAt" first, then "timestamp" — update if your deposit.html
     // uses a different field name for when the deposit was submitted.
     // Serial/reference code: tries "referenceId" / "txnId", falls back to the Firestore doc ID.
     db.collection('deposits')
       .where('uid', '==', user.uid)
-      .where('status', '==', 'pending')
       .onSnapshot(snap => {
-        pendingDeposits = snap.docs.map(d => {
+        deposits = snap.docs.map(d => {
           const data = d.data();
           return {
             amount: data.claimedAmount || 0,
             date: formatDate(data.createdAt || data.timestamp),
-            serial: data.referenceId || data.txnId || d.id
+            serial: data.referenceId || data.txnId || d.id,
+            status: data.status || 'pending'
           };
-        });
+        }).sort((a, b) => (b.date > a.date ? 1 : -1));
         renderCard();
       });
 
@@ -218,6 +229,7 @@ firebase.auth().onAuthStateChanged(async user => {
     card.innerHTML = `<div class="row"><span class="label">Failed to load assets</span></div>`;
   }
 });
+
 </script>
 </body>
 </html>
