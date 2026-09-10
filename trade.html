@@ -158,14 +158,17 @@
   .typing-text {
   font-size:28px; font-weight:900; color:#f0b90b;
   display:inline-block;
-  transform: scaleX(0);
-  transform-origin: center;
-  opacity:0;
-  animation: expandCenter 1s ease-out forwards;
+  white-space:pre;
 }
-@keyframes expandCenter {
-  from { transform: scaleX(0); opacity:0; }
-  to { transform: scaleX(1); opacity:1; }
+.typing-cursor {
+  display:inline-block;
+  width:3px;
+  background:#f0b90b;
+  margin-left:2px;
+  animation: blinkCursor 0.6s step-end infinite;
+}
+@keyframes blinkCursor {
+  50% { opacity:0; }
 }
 </style>
 </head>
