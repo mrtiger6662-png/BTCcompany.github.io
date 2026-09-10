@@ -179,20 +179,23 @@ firebase.auth().onAuthStateChanged(async user => {
     });
 
     // Pending deposits: sum every deposit doc for this user with status == "pending"
+    // NOTE: field names must match exactly what deposit.html writes: uid + claimedAmount
     db.collection('deposits')
-      .where('userId', '==', user.uid)
+      .where('uid', '==', user.uid)
       .where('status', '==', 'pending')
       .onSnapshot(snap => {
-        pendingDepositTotal = snap.docs.reduce((sum, d) => sum + (d.data().amount || 0), 0);
+        pendingDepositTotal = snap.docs.reduce((sum, d) => sum + (d.data().claimedAmount || 0), 0);
         renderCard();
       });
 
     // Pending withdrawals: sum every withdrawal doc for this user with status == "pending"
+    // NOTE: confirm withdrawal.html uses the same field names (uid + claimedAmount) —
+    // update below if the withdrawal creation code uses different field names.
     db.collection('withdrawals')
-      .where('userId', '==', user.uid)
+      .where('uid', '==', user.uid)
       .where('status', '==', 'pending')
       .onSnapshot(snap => {
-        pendingWithdrawalTotal = snap.docs.reduce((sum, d) => sum + (d.data().amount || 0), 0);
+        pendingWithdrawalTotal = snap.docs.reduce((sum, d) => sum + (d.data().claimedAmount || 0), 0);
         renderCard();
       });
   } catch (e) {
