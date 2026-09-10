@@ -26,6 +26,9 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script>
+// ⚠️ Keep this in sync with the ADMIN_EMAIL value inside admin.html
+const ADMIN_EMAIL = "admin@example.com";
+
 const firebaseConfig = {
   apiKey: "AIzaSyDJoPr8RvE1xkNTKRr5kwTx6E51GCMn_HE",
   authDomain: "abc-company-6272a.firebaseapp.com",
@@ -46,10 +49,13 @@ function logIn() {
   }
   const email = identifier.includes('@') ? identifier : identifier.replace(/\D/g,'') + '@abccompany-users.com';
   firebase.auth().signInWithEmailAndPassword(email, password)
-    .then(() => {
+    .then((cred) => {
       msg.style.color = '#0ecb81';
       msg.textContent = 'Login successful! Redirecting...';
-      setTimeout(() => window.location.href = 'market.html', 1000);
+      const destination = (cred.user.email || '').toLowerCase() === ADMIN_EMAIL.toLowerCase()
+        ? 'admin.html'
+        : 'market.html';
+      setTimeout(() => window.location.href = destination, 1000);
     })
     .catch(err => {
       msg.style.color = 'red';
