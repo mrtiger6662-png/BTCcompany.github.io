@@ -213,7 +213,8 @@ document.getElementById('proof-input').addEventListener('change', async function
 
   uploadBtn.disabled = true;
   statusEl.className = 'proof-status show';
-  statusEl.textContent = 'Uploading proof, please wait...';
+statusEl.textContent = `Proof submitted for ${amountVal} ${currentAsset.symbol}. We will verify shortly.`;
+document.getElementById('amount-input').value = '';   
 
   try {
     const formData = new FormData();
