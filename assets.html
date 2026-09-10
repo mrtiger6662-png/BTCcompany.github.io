@@ -45,6 +45,21 @@
   .label { color:#848e9c; font-size:13px; }
   .value { font-weight:bold; word-break:break-all; text-align:right; max-width:60%; }
 
+  /* Status badges for pending items */
+  .status-badge {
+    display:inline-block; padding:2px 10px; border-radius:12px;
+    font-size:12px; font-weight:bold;
+  }
+  .status-pending {
+    background:rgba(240,185,11,0.15); color:#f0b90b;
+  }
+  .status-approved {
+    background:rgba(14,203,129,0.15); color:#0ecb81;
+  }
+  .status-rejected {
+    background:rgba(246,70,93,0.15); color:#f6465d;
+  }
+
   .bottom-nav {
     position:fixed; bottom:0; left:0; right:0; background:#161a1e;
     display:flex; justify-content:space-around; padding:10px 0;
@@ -123,17 +138,48 @@ firebase.auth().onAuthStateChanged(async user => {
 
   // ---- Asset breakdown (edit/add rows as your Firestore fields grow) ----
   const card = document.getElementById('assets-card');
-  try {
-    const doc = await firebase.firestore().collection('users').doc(user.uid).get();
-    if (doc.exists) {
-      const data = doc.data();
-      const balance = (data.balance || 0).toFixed(2);
-      card.innerHTML = `
-        <div class="row"><span class="label">USDT</span><span class="value">${balance}</span></div>
+
+  function renderCard(data) {
+    const balance = (data.balance || 0).toFixed(2);
+    const pendingDeposit = (data.pendingDeposit || 0).toFixed(2);
+    const pendingWithdrawal = (data.pendingWithdrawal || 0).toFixed(2);
+
+    let rows = `
+      <div class="row"><span class="label">USDT</span><span class="value">${balance}</span></div>
+    `;
+
+    // Only show the pending rows when there is actually something pending
+    if (parseFloat(pendingDeposit) > 0) {
+      rows += `
+        <div class="row">
+          <span class="label">Pending Deposit</span>
+          <span class="value">${pendingDeposit} USDT <span class="status-badge status-pending">Pending</span></span>
+        </div>
       `;
-    } else {
-      card.innerHTML = `<div class="row"><span class="label">No assets found</span></div>`;
     }
+    if (parseFloat(pendingWithdrawal) > 0) {
+      rows += `
+        <div class="row">
+          <span class="label">Pending Withdrawal</span>
+          <span class="value">${pendingWithdrawal} USDT <span class="status-badge status-pending">Pending</span></span>
+        </div>
+      `;
+    }
+
+    card.innerHTML = rows;
+  }
+
+  try {
+    // Real-time updates so the badge changes automatically when an admin
+    // approves/rejects the deposit or withdrawal in Firestore.
+    firebase.firestore().collection('users').doc(user.uid)
+      .onSnapshot(doc => {
+        if (doc.exists) {
+          renderCard(doc.data());
+        } else {
+          card.innerHTML = `<div class="row"><span class="label">No assets found</span></div>`;
+        }
+      });
   } catch (e) {
     card.innerHTML = `<div class="row"><span class="label">Failed to load assets</span></div>`;
   }
