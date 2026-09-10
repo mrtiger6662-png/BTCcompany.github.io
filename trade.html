@@ -49,6 +49,28 @@
     100% { background-position:-200% 0; }
   }
 
+  .welcome-loading {
+    display:flex; align-items:center; justify-content:center;
+    height:60vh; text-align:center; padding:20px;
+  }
+  .typing-text {
+    font-size:28px; font-weight:900; color:#ff3b3b;
+    text-shadow:
+      -2px -2px 0 #fff, 2px -2px 0 #fff,
+      -2px 2px 0 #fff, 2px 2px 0 #fff;
+    white-space:nowrap; overflow:hidden;
+    border-right:3px solid #fff;
+    width:0;
+    animation: typing 1.8s steps(22, end) forwards, blink 0.7s step-end infinite;
+  }
+  @keyframes typing {
+    from { width:0; }
+    to { width:22ch; }
+  }
+  @keyframes blink {
+    50% { border-color:transparent; }
+  }
+
   #chart-view { display:none; padding:16px; }
 
   .demo-banner {
@@ -315,7 +337,7 @@ function renderSkeletonRows(count) {
 const listView = document.getElementById('coin-list-view');
 
 async function loadCoinList() {
-  listView.innerHTML = renderSkeletonRows(coinList.length);
+  listView.innerHTML = '<div class="welcome-loading"><span class="typing-text">Welcome Smart Trading</span></div>';
   try {
     const symbolsParam = encodeURIComponent(JSON.stringify(coinList.map(c => c.symbol)));
     const res = await fetch('https://api.binance.com/api/v3/ticker/24hr?symbols=' + symbolsParam);
