@@ -427,12 +427,16 @@ loadMarket();
 setInterval(() => {
   if (currentTab === 'crypto' || currentTab === 'futures') {
     loadMarket();
-  } else if (currentTab === 'forex') {
+  }
+}, 2000); // Crypto/Futures refresh every 2 seconds
+
+setInterval(() => {
+  if (currentTab === 'forex') {
     loadForex();
   } else if (currentTab === 'stocks') {
     loadStocks();
   }
-}, 60000);
+}, 60000); // Forex/Stocks refresh every 60 seconds
 </script>
 
 </body>
