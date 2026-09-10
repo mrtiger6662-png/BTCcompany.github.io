@@ -179,7 +179,25 @@
   <h1 id="page-title">Smart Trading</h1>
 </header>
 
-<div id="coin-list-view"></div>
+<div id="coin-list-view"><div class="welcome-loading"><span class="typing-text" id="welcome-text"></span><span class="typing-cursor">&nbsp;</span></div></div>
+<script>
+(function() {
+  var text = "Welcome Smart Trading";
+  var el = document.getElementById('welcome-text');
+  var chars = text.split('').map(() => ' ');
+  var mid = Math.floor(text.length / 2);
+  chars[mid] = text[mid];
+  el.textContent = chars.join('');
+  var left = mid, right = mid, goRight = true;
+  var timer = setInterval(function() {
+    if (left <= 0 && right >= text.length - 1) { clearInterval(timer); return; }
+    if (goRight && right < text.length - 1) { right++; chars[right] = text[right]; }
+    else if (left > 0) { left--; chars[left] = text[left]; }
+    goRight = !goRight;
+    el.textContent = chars.join('');
+  }, 60);
+})();
+</script>
 
 <div id="chart-view">
 
