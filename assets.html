@@ -140,12 +140,12 @@ firebase.auth().onAuthStateChanged(async user => {
   const card = document.getElementById('assets-card');
   const db = firebase.firestore();
 
-  // Keep all deposits (pending/approved/rejected) as a list, so each can
-  // show its own date/serial/status, and pending withdrawals total in a
-  // separate variable. Re-render whenever either one changes.
+  // Keep all deposits and all withdrawals (pending/approved/rejected) as
+  // lists, so each row can show its own date/serial/status. Re-render
+  // whenever either one changes.
   // (The plain USDT balance row is intentionally not shown on this page.)
-  let deposits = []; // [{ amount, date, serial, status }]
-  let pendingWithdrawalTotal = 0;
+  let deposits = [];    // [{ amount, date, serial, status }]
+  let withdrawals = []; // [{ amount, date, serial, status }]
 
   // Turns a Firestore Timestamp (or missing value) into "DD Mon YYYY, HH:MM"
   function formatDate(ts) {
@@ -155,7 +155,7 @@ firebase.auth().onAuthStateChanged(async user => {
       ', ' + d.toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' });
   }
 
-  // Maps a deposit's Firestore status to what the badge should show.
+  // Maps a deposit/withdrawal's Firestore status to what the badge should show.
   // NOTE: assumes the admin panel writes status as "pending" / "approved" / "rejected".
   // If your admin panel uses different words, update the keys below to match.
   function statusBadge(status) {
@@ -164,41 +164,33 @@ firebase.auth().onAuthStateChanged(async user => {
     return { text: 'Pending', cls: 'status-pending' };
   }
 
+  // Renders one row (used for both deposits and withdrawals).
+  function renderRow(label, item) {
+    const badge = statusBadge(item.status);
+    return `
+      <div class="row">
+        <span class="label">
+          ${label}
+          <div style="margin-top:4px; font-size:12px; color:#5e6673;">${item.date}</div>
+          <div style="margin-top:2px; font-size:12px; color:#5e6673;">Ref: ${item.serial}</div>
+        </span>
+        <span class="value">${item.amount.toFixed(2)} USDT <span class="status-badge ${badge.cls}">${badge.text}</span></span>
+      </div>
+    `;
+  }
+
   function renderCard() {
     let rows = '';
-
-    deposits.forEach(dep => {
-      const badge = statusBadge(dep.status);
-      rows += `
-        <div class="row">
-          <span class="label">
-            Deposit
-            <div style="margin-top:4px; font-size:12px; color:#5e6673;">${dep.date}</div>
-            <div style="margin-top:2px; font-size:12px; color:#5e6673;">Ref: ${dep.serial}</div>
-          </span>
-          <span class="value">${dep.amount.toFixed(2)} USDT <span class="status-badge ${badge.cls}">${badge.text}</span></span>
-        </div>
-      `;
-    });
-
-    if (pendingWithdrawalTotal > 0) {
-      rows += `
-        <div class="row">
-          <span class="label">Pending Withdrawal</span>
-          <span class="value">${pendingWithdrawalTotal.toFixed(2)} USDT <span class="status-badge status-pending">Pending</span></span>
-        </div>
-      `;
-    }
-
+    deposits.forEach(dep => { rows += renderRow('Deposit', dep); });
+    withdrawals.forEach(wd => { rows += renderRow('Withdrawal', wd); });
     card.innerHTML = rows;
   }
 
   try {
     // All deposits for this user — no status filter, so approved/rejected
-    // ones stay visible too, not just pending ones. Newest first.
+    // ones stay visible too, not just pending ones.
     // NOTE: field names must match exactly what deposit.html writes: uid + claimedAmount.
-    // Date/time: tries "createdAt" first, then "timestamp" — update if your deposit.html
-    // uses a different field name for when the deposit was submitted.
+    // Date/time: tries "createdAt" first, then "timestamp".
     // Serial/reference code: tries "referenceId" / "txnId", falls back to the Firestore doc ID.
     db.collection('deposits')
       .where('uid', '==', user.uid)
@@ -215,14 +207,22 @@ firebase.auth().onAuthStateChanged(async user => {
         renderCard();
       });
 
-    // Pending withdrawals: sum every withdrawal doc for this user with status == "pending"
-    // NOTE: confirm withdrawal.html uses the same field names (uid + claimedAmount) —
-    // update below if the withdrawal creation code uses different field names.
+    // All withdrawals for this user — no status filter, so approved/rejected
+    // ones stay visible too, not just pending ones.
+    // NOTE: withdraw.html writes uid + amount (not claimedAmount) + createdAt,
+    // so we use "amount" here to match it.
     db.collection('withdrawals')
       .where('uid', '==', user.uid)
-      .where('status', '==', 'pending')
       .onSnapshot(snap => {
-        pendingWithdrawalTotal = snap.docs.reduce((sum, d) => sum + (d.data().claimedAmount || 0), 0);
+        withdrawals = snap.docs.map(d => {
+          const data = d.data();
+          return {
+            amount: data.amount || 0,
+            date: formatDate(data.createdAt || data.timestamp),
+            serial: data.referenceId || data.txnId || d.id,
+            status: data.status || 'pending'
+          };
+        }).sort((a, b) => (b.date > a.date ? 1 : -1));
         renderCard();
       });
   } catch (e) {
