@@ -10,7 +10,7 @@
   header { display:flex; align-items:center; justify-content:space-between; padding:16px 20px; }
   header h1 { font-size:20px; margin:0; }
   .icons { display:flex; align-items:center; gap:16px; }
-  .icons span { cursor:pointer; }
+  .icons span, .icons a.icon-link { cursor:pointer; color:#eaecef; text-decoration:none; }
   .deposit-btn {
     background:#f0b90b; color:#202630; border:none;
     padding:8px 16px; border-radius:8px; font-weight:bold;
@@ -64,7 +64,7 @@
   <div class="icons">
     <a href="deposit.html" class="deposit-btn">Deposit</a>
     <span>&#128269;</span>
-    <span>&#128276;</span>
+    <a href="notifications.html" class="icon-link" aria-label="Notifications">&#128276;</a>
   </div>
 </header>
 
@@ -273,7 +273,7 @@ async function loadForex() {
   }));
 
   if (!anySuccess) {
-    tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color:#f6465d;">Could not load forex data (' + lastError + '). একটু পরে আবার চেষ্টা করুন।</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color:#f6465d;">Could not load forex data (' + lastError + '). Please try again shortly.</td></tr>';
     return;
   }
 
@@ -316,11 +316,11 @@ async function loadForex() {
   });
 
   if (tbody.innerHTML === '') {
-    tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color:#f6465d;">Could not load forex data. আবার চেষ্টা করুন।</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color:#f6465d;">Could not load forex data. Please try again.</td></tr>';
   }
 }
 
-// ==== এখানে তোমার Finnhub key বসাও ====
+// ==== Put your Finnhub key here ====
 const FINNHUB_API_KEY = 'dafpl19r01quvmmgssp0dafpl19r01quvmmgsspg';
 
 const stockList = [
@@ -366,11 +366,11 @@ async function fetchStockWithRetry(symbol, retries = 2) {
 async function loadStocks() {
   const tbody = document.getElementById('market-body');
   const highlightRow = document.getElementById('highlight-row');
-  tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color:#848e9c;">Loading... (এতে কিছুটা সময় লাগতে পারে)</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color:#848e9c;">Loading... (this may take a moment)</td></tr>';
   highlightRow.innerHTML = '';
 
   if (!FINNHUB_API_KEY || FINNHUB_API_KEY === 'YOUR_FINNHUB_API_KEY_HERE') {
-    tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color:#f6465d;">দয়া করে কোডে তোমার Finnhub API key বসাও।</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color:#f6465d;">Please add your Finnhub API key in the code.</td></tr>';
     return;
   }
 
@@ -419,7 +419,7 @@ async function loadStocks() {
   }
 
   if (tbody.innerHTML === '') {
-    tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color:#f6465d;">Could not load stock data. কিছুক্ষণ পর আবার চেষ্টা করুন।</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color:#f6465d;">Could not load stock data. Please try again shortly.</td></tr>';
   }
 }
 
