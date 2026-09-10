@@ -43,7 +43,11 @@ async function getNextAccountId() {
   const counterRef = firebase.firestore().collection('counters').doc('users');
   const nextNumber = await firebase.firestore().runTransaction(async (t) => {
     const doc = await t.get(counterRef);
-    const current = doc.exists ? doc.data().count : 1000;
+    let current = 1000;
+    const existingCount = doc.exists ? doc.data().count : undefined;
+    if (typeof existingCount === 'number' && !isNaN(existingCount)) {
+      current = existingCount;
+    }
     const next = current + 1;
     t.set(counterRef, { count: next });
     return next;
