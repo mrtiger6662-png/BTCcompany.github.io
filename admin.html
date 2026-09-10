@@ -68,6 +68,7 @@
 <div id="gate-view" class="gate" style="display:none;">
   <h2>Access denied</h2>
   <p id="gate-msg">This account is not authorized to view the admin panel.</p>
+  <p style="font-size:11px;color:#5b6169;">Logged in as: <span id="gate-current-email">-</span><br>Expected admin email: <span id="gate-expected-email">-</span></p>
   <button class="logout-btn" onclick="firebase.auth().signOut().then(()=>window.location.href='login.html')">Log Out</button>
 </div>
 
@@ -169,6 +170,8 @@ firebase.auth().onAuthStateChanged(user => {
     return;
   }
   if ((user.email || '').toLowerCase() !== ADMIN_EMAIL.toLowerCase()) {
+    document.getElementById('gate-current-email').textContent = user.email || '(no email)';
+    document.getElementById('gate-expected-email').textContent = ADMIN_EMAIL;
     document.getElementById('gate-view').style.display = 'flex';
     return;
   }
