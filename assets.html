@@ -194,18 +194,34 @@ firebase.auth().onAuthStateChanged(async user => {
   }
 
   // ---- Trades: profit / loss list ----
-  // NOTE: assumes a "trades" collection with fields:
-  //   uid, symbol, profit (number, +ve = profit / -ve = loss),
-  //   status ("success"/"failed"), createdAt, referenceId (or txnId)
-  // If your trade.html writes different field names, update the
-  // mapping below (see the comments next to each line).
+  // Matches the real fields written by trade.html's placeTrade():
+  //   uid, symbol, amount, expectedReturn, orderNumber, createdAt,
+  //   status ("pending" while running, "completed" once resolved),
+  //   result ("win" / "lose" / "tie", only set once completed)
+  // Profit/loss is DERIVED here (trade.html doesn't store a "profit" field):
+  //   win  -> +expectedReturn
+  //   lose -> -amount (the stake is lost)
+  //   tie  -> 0
+  //   pending (not resolved yet) -> shown as "Pending", no P/L badge
   const tradesList = document.getElementById('trades-list');
   const totalProfitEl = document.getElementById('totalProfit');
   const totalLossEl = document.getElementById('totalLoss');
 
+  function statusLabel(status) {
+    if (status === 'completed') return 'Completed';
+    if (status === 'pending') return 'Pending';
+    if (status === 'error') return 'Error';
+    return status;
+  }
+
   function renderTradeRow(t) {
+    const pending = t.status !== 'completed';
     const isProfit = t.profit >= 0;
     const sign = isProfit ? '+' : '';
+    const badge = pending
+      ? `<span class="status-badge status-pending">${statusLabel(t.status)}</span>`
+      : `<span class="pl-badge ${isProfit ? 'pl-profit' : 'pl-loss'}">${sign}${t.profit.toFixed(2)} USDT</span>`;
+
     return `
       <div class="row">
         <span class="label">
@@ -214,8 +230,8 @@ firebase.auth().onAuthStateChanged(async user => {
           <div style="margin-top:2px; font-size:12px; color:#5e6673;">Ref: ${t.serial}</div>
         </span>
         <span class="value" style="text-align:right;">
-          <span class="pl-badge ${isProfit ? 'pl-profit' : 'pl-loss'}">${sign}${t.profit.toFixed(2)} USDT</span>
-          <div style="margin-top:4px; font-size:12px; color:#5e6673;">${t.status === 'success' ? 'Success' : t.status}</div>
+          ${badge}
+          ${pending ? '' : `<div style="margin-top:4px; font-size:12px; color:#5e6673;">${statusLabel(t.status)}</div>`}
         </span>
       </div>
     `;
@@ -228,8 +244,9 @@ firebase.auth().onAuthStateChanged(async user => {
       tradesList.innerHTML = trades.map(renderTradeRow).join('');
     }
 
-    const totalProfit = trades.filter(t => t.profit > 0).reduce((s, t) => s + t.profit, 0);
-    const totalLoss = trades.filter(t => t.profit < 0).reduce((s, t) => s + t.profit, 0);
+    const completed = trades.filter(t => t.status === 'completed');
+    const totalProfit = completed.filter(t => t.profit > 0).reduce((s, t) => s + t.profit, 0);
+    const totalLoss = completed.filter(t => t.profit < 0).reduce((s, t) => s + t.profit, 0);
     totalProfitEl.textContent = `+${totalProfit.toFixed(2)} USDT`;
     totalLossEl.textContent = `${totalLoss.toFixed(2)} USDT`; // already negative
   }
@@ -240,12 +257,16 @@ firebase.auth().onAuthStateChanged(async user => {
       .onSnapshot(snap => {
         const trades = snap.docs.map(d => {
           const data = d.data();
+          let profit = 0;
+          if (data.result === 'win') profit = data.expectedReturn || 0;
+          else if (data.result === 'lose') profit = -(data.amount || 0);
+          // 'tie' or not yet resolved -> profit stays 0
           return {
-            symbol: data.symbol || '—',                                   // e.g. "BTC/USDT"
-            profit: data.profit || 0,                                     // +ve profit / -ve loss
-            status: data.status || 'success',
-            date: formatDate(data.createdAt || data.timestamp),
-            serial: data.referenceId || data.txnId || d.id
+            symbol: data.symbol || '—',                 // e.g. "ETHUSDT"
+            profit: profit,
+            status: data.status || 'pending',            // "pending" | "completed" | "error"
+            date: formatDate(data.createdAt),
+            serial: data.orderNumber || d.id
           };
         }).sort((a, b) => (b.date > a.date ? 1 : -1));
         renderTrades(trades);
