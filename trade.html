@@ -184,18 +184,12 @@
 (function() {
   var text = "Welcome Smart Trading";
   var el = document.getElementById('welcome-text');
-  var chars = text.split('').map(() => ' ');
-  var mid = Math.floor(text.length / 2);
-  chars[mid] = text[mid];
-  el.textContent = chars.join('');
-  var left = mid, right = mid, goRight = true;
+  var i = 0;
   var timer = setInterval(function() {
-    if (left <= 0 && right >= text.length - 1) { clearInterval(timer); return; }
-    if (goRight && right < text.length - 1) { right++; chars[right] = text[right]; }
-    else if (left > 0) { left--; chars[left] = text[left]; }
-    goRight = !goRight;
-    el.textContent = chars.join('');
-  }, 60);
+    i++;
+    el.textContent = text.substring(0, i);
+    if (i >= text.length) clearInterval(timer);
+  }, 80);
 })();
 </script>
 
