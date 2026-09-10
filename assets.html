@@ -136,32 +136,34 @@ firebase.auth().onAuthStateChanged(async user => {
     });
   // -------------------------------------
 
-  // ---- Asset breakdown (edit/add rows as your Firestore fields grow) ----
+  // ---- Asset breakdown ----
   const card = document.getElementById('assets-card');
+  const db = firebase.firestore();
 
-  function renderCard(data) {
-    const balance = (data.balance || 0).toFixed(2);
-    const pendingDeposit = (data.pendingDeposit || 0).toFixed(2);
-    const pendingWithdrawal = (data.pendingWithdrawal || 0).toFixed(2);
+  // Keep the three pieces (balance, pending deposits, pending withdrawals)
+  // in separate variables and re-render whenever any one of them changes.
+  let currentBalance = 0;
+  let pendingDepositTotal = 0;
+  let pendingWithdrawalTotal = 0;
 
+  function renderCard() {
     let rows = `
-      <div class="row"><span class="label">USDT</span><span class="value">${balance}</span></div>
+      <div class="row"><span class="label">USDT</span><span class="value">${currentBalance.toFixed(2)}</span></div>
     `;
 
-    // Only show the pending rows when there is actually something pending
-    if (parseFloat(pendingDeposit) > 0) {
+    if (pendingDepositTotal > 0) {
       rows += `
         <div class="row">
           <span class="label">Pending Deposit</span>
-          <span class="value">${pendingDeposit} USDT <span class="status-badge status-pending">Pending</span></span>
+          <span class="value">${pendingDepositTotal.toFixed(2)} USDT <span class="status-badge status-pending">Pending</span></span>
         </div>
       `;
     }
-    if (parseFloat(pendingWithdrawal) > 0) {
+    if (pendingWithdrawalTotal > 0) {
       rows += `
         <div class="row">
           <span class="label">Pending Withdrawal</span>
-          <span class="value">${pendingWithdrawal} USDT <span class="status-badge status-pending">Pending</span></span>
+          <span class="value">${pendingWithdrawalTotal.toFixed(2)} USDT <span class="status-badge status-pending">Pending</span></span>
         </div>
       `;
     }
@@ -170,15 +172,28 @@ firebase.auth().onAuthStateChanged(async user => {
   }
 
   try {
-    // Real-time updates so the badge changes automatically when an admin
-    // approves/rejects the deposit or withdrawal in Firestore.
-    firebase.firestore().collection('users').doc(user.uid)
-      .onSnapshot(doc => {
-        if (doc.exists) {
-          renderCard(doc.data());
-        } else {
-          card.innerHTML = `<div class="row"><span class="label">No assets found</span></div>`;
-        }
+    // Balance: from the user document (unchanged)
+    db.collection('users').doc(user.uid).onSnapshot(doc => {
+      currentBalance = doc.exists ? (doc.data().balance || 0) : 0;
+      renderCard();
+    });
+
+    // Pending deposits: sum every deposit doc for this user with status == "pending"
+    db.collection('deposits')
+      .where('userId', '==', user.uid)
+      .where('status', '==', 'pending')
+      .onSnapshot(snap => {
+        pendingDepositTotal = snap.docs.reduce((sum, d) => sum + (d.data().amount || 0), 0);
+        renderCard();
+      });
+
+    // Pending withdrawals: sum every withdrawal doc for this user with status == "pending"
+    db.collection('withdrawals')
+      .where('userId', '==', user.uid)
+      .where('status', '==', 'pending')
+      .onSnapshot(snap => {
+        pendingWithdrawalTotal = snap.docs.reduce((sum, d) => sum + (d.data().amount || 0), 0);
+        renderCard();
       });
   } catch (e) {
     card.innerHTML = `<div class="row"><span class="label">Failed to load assets</span></div>`;
