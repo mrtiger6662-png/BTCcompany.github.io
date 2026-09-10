@@ -40,6 +40,10 @@
   }
 
   .card { background:#161a1e; border-radius:12px; margin:16px; padding:20px; }
+  .card-title {
+    color:#848e9c; font-size:13px; margin-bottom:8px;
+    display:flex; justify-content:space-between; align-items:center;
+  }
   .row { display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid #1e2329; }
   .row:last-child { border-bottom:none; }
   .label { color:#848e9c; font-size:13px; }
@@ -59,6 +63,24 @@
   .status-rejected {
     background:rgba(246,70,93,0.15); color:#f6465d;
   }
+
+  /* Profit / Loss badges for trades */
+  .pl-badge {
+    display:inline-block; padding:4px 10px; border-radius:8px;
+    font-size:13px; font-weight:bold; white-space:nowrap;
+  }
+  .pl-profit { background:rgba(14,203,129,0.15); color:#0ecb81; }
+  .pl-loss   { background:rgba(246,70,93,0.15); color:#f6465d; }
+
+  /* Trade summary (total profit / total loss) */
+  .summary-grid {
+    display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:12px;
+  }
+  .summary-box {
+    background:#1e2329; border-radius:8px; padding:12px;
+  }
+  .summary-box .s-label { color:#848e9c; font-size:12px; margin-bottom:4px; }
+  .summary-box .s-value { font-size:16px; font-weight:bold; }
 
   .bottom-nav {
     position:fixed; bottom:0; left:0; right:0; background:#161a1e;
@@ -93,6 +115,24 @@
     <span class="cur">USDT &#9662;</span>
   </div>
   <div class="balance-usd" id="balanceUsd">&#8776; $0.00</div>
+</div>
+
+<!-- Trades: profit / loss per trade -->
+<div class="card" id="trades-card">
+  <div class="card-title"><span>Recent Trades</span></div>
+  <div id="trades-list">
+    <div class="row"><span class="label">Loading...</span></div>
+  </div>
+  <div class="summary-grid">
+    <div class="summary-box">
+      <div class="s-label">Total Profit</div>
+      <div class="s-value" id="totalProfit" style="color:#0ecb81;">+0.00 USDT</div>
+    </div>
+    <div class="summary-box">
+      <div class="s-label">Total Loss</div>
+      <div class="s-value" id="totalLoss" style="color:#f6465d;">-0.00 USDT</div>
+    </div>
+  </div>
 </div>
 
 <div class="card" id="assets-card">
@@ -136,16 +176,7 @@ firebase.auth().onAuthStateChanged(async user => {
     });
   // -------------------------------------
 
-  // ---- Asset breakdown ----
-  const card = document.getElementById('assets-card');
   const db = firebase.firestore();
-
-  // Keep all deposits and all withdrawals (pending/approved/rejected) as
-  // lists, so each row can show its own date/serial/status. Re-render
-  // whenever either one changes.
-  // (The plain USDT balance row is intentionally not shown on this page.)
-  let deposits = [];    // [{ amount, date, serial, status }]
-  let withdrawals = []; // [{ amount, date, serial, status }]
 
   // Turns a Firestore Timestamp (or missing value) into "DD Mon YYYY, HH:MM"
   function formatDate(ts) {
@@ -156,15 +187,80 @@ firebase.auth().onAuthStateChanged(async user => {
   }
 
   // Maps a deposit/withdrawal's Firestore status to what the badge should show.
-  // NOTE: assumes the admin panel writes status as "pending" / "approved" / "rejected".
-  // If your admin panel uses different words, update the keys below to match.
   function statusBadge(status) {
     if (status === 'approved') return { text: 'Success', cls: 'status-approved' };
     if (status === 'rejected') return { text: 'Reject', cls: 'status-rejected' };
     return { text: 'Pending', cls: 'status-pending' };
   }
 
-  // Renders one row (used for both deposits and withdrawals).
+  // ---- Trades: profit / loss list ----
+  // NOTE: assumes a "trades" collection with fields:
+  //   uid, symbol, profit (number, +ve = profit / -ve = loss),
+  //   status ("success"/"failed"), createdAt, referenceId (or txnId)
+  // If your trade.html writes different field names, update the
+  // mapping below (see the comments next to each line).
+  const tradesList = document.getElementById('trades-list');
+  const totalProfitEl = document.getElementById('totalProfit');
+  const totalLossEl = document.getElementById('totalLoss');
+
+  function renderTradeRow(t) {
+    const isProfit = t.profit >= 0;
+    const sign = isProfit ? '+' : '';
+    return `
+      <div class="row">
+        <span class="label">
+          ${t.symbol}
+          <div style="margin-top:4px; font-size:12px; color:#5e6673;">${t.date}</div>
+          <div style="margin-top:2px; font-size:12px; color:#5e6673;">Ref: ${t.serial}</div>
+        </span>
+        <span class="value" style="text-align:right;">
+          <span class="pl-badge ${isProfit ? 'pl-profit' : 'pl-loss'}">${sign}${t.profit.toFixed(2)} USDT</span>
+          <div style="margin-top:4px; font-size:12px; color:#5e6673;">${t.status === 'success' ? 'Success' : t.status}</div>
+        </span>
+      </div>
+    `;
+  }
+
+  function renderTrades(trades) {
+    if (!trades.length) {
+      tradesList.innerHTML = `<div class="row"><span class="label">No trades yet</span></div>`;
+    } else {
+      tradesList.innerHTML = trades.map(renderTradeRow).join('');
+    }
+
+    const totalProfit = trades.filter(t => t.profit > 0).reduce((s, t) => s + t.profit, 0);
+    const totalLoss = trades.filter(t => t.profit < 0).reduce((s, t) => s + t.profit, 0);
+    totalProfitEl.textContent = `+${totalProfit.toFixed(2)} USDT`;
+    totalLossEl.textContent = `${totalLoss.toFixed(2)} USDT`; // already negative
+  }
+
+  try {
+    db.collection('trades')
+      .where('uid', '==', user.uid)
+      .onSnapshot(snap => {
+        const trades = snap.docs.map(d => {
+          const data = d.data();
+          return {
+            symbol: data.symbol || '—',                                   // e.g. "BTC/USDT"
+            profit: data.profit || 0,                                     // +ve profit / -ve loss
+            status: data.status || 'success',
+            date: formatDate(data.createdAt || data.timestamp),
+            serial: data.referenceId || data.txnId || d.id
+          };
+        }).sort((a, b) => (b.date > a.date ? 1 : -1));
+        renderTrades(trades);
+      });
+  } catch (e) {
+    tradesList.innerHTML = `<div class="row"><span class="label">Failed to load trades</span></div>`;
+  }
+  // -------------------------------------
+
+  // ---- Asset breakdown (deposits / withdrawals) ----
+  const card = document.getElementById('assets-card');
+
+  let deposits = [];    // [{ amount, date, serial, status }]
+  let withdrawals = []; // [{ amount, date, serial, status }]
+
   function renderRow(label, item) {
     const badge = statusBadge(item.status);
     return `
@@ -187,11 +283,6 @@ firebase.auth().onAuthStateChanged(async user => {
   }
 
   try {
-    // All deposits for this user — no status filter, so approved/rejected
-    // ones stay visible too, not just pending ones.
-    // NOTE: field names must match exactly what deposit.html writes: uid + claimedAmount.
-    // Date/time: tries "createdAt" first, then "timestamp".
-    // Serial/reference code: tries "referenceId" / "txnId", falls back to the Firestore doc ID.
     db.collection('deposits')
       .where('uid', '==', user.uid)
       .onSnapshot(snap => {
@@ -207,10 +298,6 @@ firebase.auth().onAuthStateChanged(async user => {
         renderCard();
       });
 
-    // All withdrawals for this user — no status filter, so approved/rejected
-    // ones stay visible too, not just pending ones.
-    // NOTE: withdraw.html writes uid + amount (not claimedAmount) + createdAt,
-    // so we use "amount" here to match it.
     db.collection('withdrawals')
       .where('uid', '==', user.uid)
       .onSnapshot(snap => {
@@ -229,7 +316,6 @@ firebase.auth().onAuthStateChanged(async user => {
     card.innerHTML = `<div class="row"><span class="label">Failed to load assets</span></div>`;
   }
 });
-
 </script>
 </body>
 </html>
