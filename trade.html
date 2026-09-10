@@ -27,28 +27,6 @@
   .change-up { color:#0ecb81; }
   .change-down { color:#f6465d; }
 
-  .skeleton-row {
-    display:flex; align-items:center; justify-content:space-between;
-    padding:14px 16px; border-bottom:1px solid #1e2329;
-  }
-  .skeleton-left { display:flex; align-items:center; gap:10px; }
-  .skeleton-box {
-    background:linear-gradient(90deg, #1e2329 25%, #2b3139 50%, #1e2329 75%);
-    background-size:200% 100%;
-    animation:shimmer 1.4s infinite;
-    border-radius:4px;
-  }
-  .skeleton-icon { width:28px; height:28px; border-radius:50%; }
-  .skeleton-name { width:70px; height:14px; margin-bottom:6px; }
-  .skeleton-sub { width:50px; height:10px; }
-  .skeleton-price { width:60px; height:14px; margin-bottom:6px; margin-left:auto; }
-  .skeleton-change { width:40px; height:10px; margin-left:auto; }
-
-  @keyframes shimmer {
-    0% { background-position:200% 0; }
-    100% { background-position:-200% 0; }
-  }
-
   #chart-view { display:none; padding:16px; }
 
   .demo-banner {
@@ -137,6 +115,41 @@
     background:rgba(240,185,11,0.15);
     box-shadow:0 0 0 6px rgba(240,185,11,0.08);
   }
+
+  /* ---------- Trade result popup (matches the ethusdt card screenshots) ---------- */
+  .tm-overlay {
+    display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6);
+    align-items:center; justify-content:center; z-index:9999; padding:20px;
+  }
+  .tm-overlay.active { display:flex; }
+  .tm-card {
+    width:100%; max-width:320px; background:linear-gradient(160deg,#1e5fe0,#0f3fae);
+    border-radius:22px; padding:28px 22px; text-align:center; color:#fff;
+    box-shadow:0 12px 40px rgba(0,0,0,0.5);
+  }
+  .tm-title { font-size:19px; font-weight:bold; margin-bottom:18px; }
+  .tm-timer-circle {
+    width:72px; height:72px; border-radius:50%; border:3px solid #f0b90b;
+    display:flex; align-items:center; justify-content:center;
+    margin:0 auto 20px; font-weight:bold; font-size:16px; color:#f0b90b;
+  }
+  .tm-result { font-size:28px; font-weight:bold; margin-bottom:18px; display:none; }
+  .tm-rows { text-align:left; margin-bottom:14px; }
+  .tm-row {
+    display:flex; justify-content:space-between; padding:7px 0;
+    font-size:13.5px; color:#c9d6f5; border-bottom:1px solid rgba(255,255,255,0.08);
+  }
+  .tm-row:last-child { border-bottom:none; }
+  .tm-row span:last-child { color:#fff; font-weight:bold; }
+  .tm-order-number {
+    font-size:11px; color:#9fb3e6; word-break:break-all; margin-top:10px;
+  }
+  .tm-again-btn {
+    display:none; margin-top:18px; width:100%; padding:13px; border:none;
+    border-radius:24px; background:#eef3ff; color:#1a4fce; font-weight:bold;
+    font-size:14px; cursor:pointer;
+  }
+  .tm-again-btn:active { background:#d9e4ff; }
 </style>
 </head>
 <body>
@@ -205,6 +218,28 @@
   <a href="profile.html"><div><div class="ic">&#128100;</div>Profile</div></a>
 </div>
 
+<!-- ---------- Trade popup card ---------- -->
+<div class="tm-overlay" id="trade-modal-overlay">
+  <div class="tm-card">
+    <div class="tm-title" id="tm-title">ethusdt</div>
+
+    <div class="tm-timer-circle" id="tm-timer-circle"><span id="tm-timer-text">60s</span></div>
+    <div class="tm-result" id="tm-result"></div>
+
+    <div class="tm-rows">
+      <div class="tm-row"><span>Open price</span><span id="tm-open">-</span></div>
+      <div class="tm-row"><span>Last price:</span><span id="tm-last">-</span></div>
+      <div class="tm-row"><span id="tm-direction-label">Up:</span><span id="tm-amount">-</span></div>
+      <div class="tm-row"><span>Fee:</span><span id="tm-fee">-</span></div>
+      <div class="tm-row"><span>Expected return:</span><span id="tm-return">-</span></div>
+    </div>
+
+    <div class="tm-order-number" id="tm-order-number">Order number: -</div>
+
+    <button class="tm-again-btn" id="tm-again-btn">Order again</button>
+  </div>
+</div>
+
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
@@ -219,6 +254,7 @@ const firebaseConfig = {
 };
 firebase.initializeApp(firebaseConfig);
 
+// ---------- Real balance (Firestore, synced with profile.html) ----------
 let currentUser = null;
 let currentBalance = 0;
 
@@ -231,6 +267,8 @@ function updateBalanceDisplay() {
   if (el) el.textContent = `Est. Total Value: ${currentBalance.toFixed(2)} USDT`;
 }
 
+// Sets the balance in Firestore to an exact new value.
+// currentBalance itself is updated automatically by the onSnapshot listener below.
 function setBalance(newVal) {
   if (!currentUser) return;
   firebase.firestore().collection('users').doc(currentUser.uid).update({
@@ -287,35 +325,136 @@ const coinList = [
   { symbol: 'HBARUSDT', name: 'Hedera', short: 'HBAR', icon: 'hbar' }
 ];
 
+// Duration options with their amount ranges and step sizes.
+// This is the fallback/default — loadTradeConfig() will overwrite it with
+// whatever the admin panel has saved to Firestore (settings/tradeConfig).
+let durationList = [
+  { seconds: 60,  returnPct: 20.00, min: 100,    max: 9999,     step: 100   },
+  { seconds: 120, returnPct: 25.00, min: 10000,  max: 49999,    step: 1000  },
+  { seconds: 180, returnPct: 30.00, min: 50000,  max: 99999,    step: 1000  },
+  { seconds: 300, returnPct: 50.00, min: 100000, max: 5000000,  step: 10000 },
+  { seconds: 600, returnPct: 85.00, min: 100000, max: Infinity, step: 10000 }
+];
+
+// Fee rate applied on every trade (0.2 USD fee on a 100 USD stake = 0.2%)
+const FEE_RATE = 0.002;
+
+let selectedDuration = null;
+
+// ---------- Load duration/return% config from Firestore (editable via admin panel) ----------
+async function loadTradeConfig() {
+  try {
+    const doc = await firebase.firestore().collection('settings').doc('tradeConfig').get();
+    if (doc.exists && Array.isArray(doc.data().durations) && doc.data().durations.length) {
+      durationList = doc.data().durations.map(d => ({
+        seconds: d.seconds,
+        returnPct: d.returnPct,
+        min: d.min,
+        max: (d.max === null || d.max === undefined) ? Infinity : d.max,
+        step: d.step
+      }));
+    } else {
+      // First run ever: seed Firestore with the default list so the admin panel has something to edit.
+      const seedData = durationList.map(d => ({ ...d, max: d.max === Infinity ? null : d.max }));
+      await firebase.firestore().collection('settings').doc('tradeConfig').set({ durations: seedData });
+    }
+  } catch (e) {
+    console.error('Failed to load trade config, using defaults:', e);
+  }
+}
+
+// ---------- Duration boxes ----------
+function renderDurationBoxes() {
+  const row = document.getElementById('duration-row');
+  row.innerHTML = '';
+  durationList.forEach(d => {
+    const box = document.createElement('div');
+    box.className = 'duration-box';
+    box.innerHTML = `<div class="duration-time">${d.seconds}s</div><div class="duration-return">${d.returnPct.toFixed(2)}% return</div>`;
+    box.addEventListener('click', () => {
+      document.querySelectorAll('.duration-box').forEach(b => b.classList.remove('selected'));
+      box.classList.add('selected');
+      selectedDuration = d;
+      showInvestSection(d);
+    });
+    row.appendChild(box);
+  });
+}
+
+function showInvestSection(d) {
+  const section = document.getElementById('invest-section');
+  const rangeText = document.getElementById('amount-range');
+  const input = document.getElementById('amount-input');
+  const errorEl = document.getElementById('amount-error');
+
+  section.style.display = 'block';
+  errorEl.textContent = '';
+  input.value = '';
+  input.placeholder = 'Investment amount';
+  updateBalanceDisplay();
+
+  if (d.max === Infinity) {
+    rangeText.textContent = `Amount range: ${d.min.toLocaleString()}+ (no upper limit)`;
+  } else {
+    rangeText.textContent = `Amount range: ${d.min.toLocaleString()} - ${d.max.toLocaleString()}`;
+  }
+}
+
+document.getElementById('amt-minus').addEventListener('click', () => adjustAmount(-1));
+document.getElementById('amt-plus').addEventListener('click', () => adjustAmount(1));
+
+function adjustAmount(dir) {
+  if (!selectedDuration) return;
+  const input = document.getElementById('amount-input');
+  let current = parseFloat(input.value);
+  if (isNaN(current)) current = selectedDuration.min;
+  current += dir * selectedDuration.step;
+  if (current < selectedDuration.min) current = selectedDuration.min;
+  if (selectedDuration.max !== Infinity && current > selectedDuration.max) current = selectedDuration.max;
+  input.value = current;
+}
+
+function validateAmount() {
+  const errorEl = document.getElementById('amount-error');
+  errorEl.textContent = '';
+  if (!selectedDuration) {
+    errorEl.textContent = 'Please select a duration first.';
+    return null;
+  }
+  const input = document.getElementById('amount-input');
+  const val = parseFloat(input.value);
+  if (isNaN(val) || val <= 0) {
+    errorEl.textContent = 'Please enter a number.';
+    return null;
+  }
+  if (val < selectedDuration.min || (selectedDuration.max !== Infinity && val > selectedDuration.max)) {
+    errorEl.textContent = `Amount must be between ${selectedDuration.min.toLocaleString()}${selectedDuration.max !== Infinity ? ' and ' + selectedDuration.max.toLocaleString() : '+'}.`;
+    return null;
+  }
+  if (val > getBalance()) {
+    errorEl.textContent = 'Insufficient balance.';
+    return null;
+  }
+  return val;
+}
+
+// ---------- Coin list / chart view switching ----------
+const listView = document.getElementById('coin-list-view');
+const chartView = document.getElementById('chart-view');
+const backBtn = document.getElementById('back-btn');
+const pageTitle = document.getElementById('page-title');
+const intervalSelect = document.getElementById('interval-select');
+
+let currentSymbol = null;
+let refreshTimer = null;
+let tradeInProgress = false;
+
 function iconUrl(icon) {
   return 'https://cdn.jsdelivr.net/gh/spothq/cryptocurrency-icons@master/128/color/' + icon + '.png';
 }
 
-function renderSkeletonRows(count) {
-  let html = '';
-  for (let i = 0; i < count; i++) {
-    html += `
-      <div class="skeleton-row">
-        <div class="skeleton-left">
-          <div class="skeleton-box skeleton-icon"></div>
-          <div>
-            <div class="skeleton-box skeleton-name"></div>
-            <div class="skeleton-box skeleton-sub"></div>
-          </div>
-        </div>
-        <div>
-          <div class="skeleton-box skeleton-price"></div>
-          <div class="skeleton-box skeleton-change"></div>
-        </div>
-      </div>`;
-  }
-  return html;
-}
-
-const listView = document.getElementById('coin-list-view');
-
 async function loadCoinList() {
-  listView.innerHTML = renderSkeletonRows(coinList.length);
+  listView.innerHTML = '<p style="text-align:center;color:#848e9c;padding:20px;">Loading...</p>';
   try {
     const symbolsParam = encodeURIComponent(JSON.stringify(coinList.map(c => c.symbol)));
     const res = await fetch('https://api.binance.com/api/v3/ticker/24hr?symbols=' + symbolsParam);
@@ -351,7 +490,354 @@ async function loadCoinList() {
   }
 }
 
-loadCoinList();
+function openChart(coin) {
+  currentSymbol = coin;
+  listView.style.display = 'none';
+  chartView.style.display = 'block';
+  backBtn.style.display = 'block';
+  pageTitle.textContent = coin.short + '/USDT';
+  document.getElementById('chart-icon').src = iconUrl(coin.icon);
+  document.getElementById('chart-pair').textContent = coin.short + '/USDT';
+
+  renderDurationBoxes();
+  document.getElementById('invest-section').style.display = 'none';
+  selectedDuration = null;
+
+  loadChart();
+  clearInterval(refreshTimer);
+  refreshTimer = setInterval(loadChart, 15000);
+}
+
+backBtn.addEventListener('click', () => {
+  clearInterval(refreshTimer);
+  chartView.style.display = 'none';
+  listView.style.display = 'block';
+  backBtn.style.display = 'none';
+  pageTitle.textContent = 'Smart Trading';
+});
+
+intervalSelect.addEventListener('change', () => {
+  if (currentSymbol) loadChart();
+});
+
+function drawCandles(canvas, klines) {
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width, h = canvas.height;
+  ctx.clearRect(0,0,w,h);
+
+  const highs = klines.map(k => parseFloat(k[2]));
+  const lows = klines.map(k => parseFloat(k[3]));
+  const max = Math.max(...highs);
+  const min = Math.min(...lows);
+  const range = (max - min) || 1;
+  const candleWidth = w / klines.length;
+
+  klines.forEach((k, i) => {
+    const open = parseFloat(k[1]);
+    const high = parseFloat(k[2]);
+    const low = parseFloat(k[3]);
+    const close = parseFloat(k[4]);
+    const up = close >= open;
+    const color = up ? '#0ecb81' : '#f6465d';
+    const x = i * candleWidth + candleWidth/2;
+
+    const yHigh = h - ((high - min)/range) * h;
+    const yLow = h - ((low - min)/range) * h;
+    const yOpen = h - ((open - min)/range) * h;
+    const yClose = h - ((close - min)/range) * h;
+
+    ctx.strokeStyle = color;
+    ctx.beginPath();
+    ctx.moveTo(x, yHigh);
+    ctx.lineTo(x, yLow);
+    ctx.stroke();
+
+    ctx.fillStyle = color;
+    const bodyTop = Math.min(yOpen, yClose);
+    const bodyHeight = Math.max(Math.abs(yClose - yOpen), 1);
+    ctx.fillRect(x - candleWidth*0.35, bodyTop, candleWidth*0.7, bodyHeight);
+  });
+}
+
+function drawVolume(canvas, klines) {
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width, h = canvas.height;
+  ctx.clearRect(0,0,w,h);
+  const volumes = klines.map(k => parseFloat(k[5]));
+  const maxVol = Math.max(...volumes) || 1;
+  const barWidth = w / klines.length;
+
+  klines.forEach((k, i) => {
+    const open = parseFloat(k[1]);
+    const close = parseFloat(k[4]);
+    const up = close >= open;
+    const vol = parseFloat(k[5]);
+    const barHeight = (vol / maxVol) * h;
+    const x = i * barWidth;
+    ctx.fillStyle = up ? 'rgba(14,203,129,0.6)' : 'rgba(246,70,93,0.6)';
+    ctx.fillRect(x + barWidth*0.15, h - barHeight, barWidth*0.7, barHeight);
+  });
+}
+
+async function loadChart() {
+  if (!currentSymbol) return;
+  try {
+    const interval = intervalSelect.value;
+    const res = await fetch(`https://api.binance.com/api/v3/klines?symbol=${currentSymbol.symbol}&interval=${interval}&limit=48`);
+    const klines = await res.json();
+    if (!klines || klines.length === 0) return;
+
+    drawCandles(document.getElementById('candles'), klines);
+    drawVolume(document.getElementById('volume'), klines);
+
+    const last = klines[klines.length - 1];
+    const first = klines[0];
+    const openVal = parseFloat(last[1]);
+    const highVal = parseFloat(last[2]);
+    const lowVal = parseFloat(last[3]);
+    const closeVal = parseFloat(last[4]);
+    const prevClose = parseFloat(klines[klines.length - 2] ? klines[klines.length - 2][4] : first[1]);
+    const changePercent = ((closeVal - prevClose) / prevClose) * 100;
+    const up = changePercent >= 0;
+
+    document.getElementById('live-price').textContent = closeVal.toLocaleString(undefined,{maximumFractionDigits:4}) + ' USD';
+    const changeEl = document.getElementById('live-change');
+    changeEl.textContent = (up?'+':'') + changePercent.toFixed(2) + '%';
+    changeEl.className = up ? 'change-up' : 'change-down';
+    document.getElementById('ohlc-open').textContent = openVal.toLocaleString(undefined,{maximumFractionDigits:2});
+    document.getElementById('ohlc-high').textContent = highVal.toLocaleString(undefined,{maximumFractionDigits:2});
+    document.getElementById('ohlc-low').textContent = lowVal.toLocaleString(undefined,{maximumFractionDigits:2});
+    document.getElementById('ohlc-close').textContent = closeVal.toLocaleString(undefined,{maximumFractionDigits:2});
+
+    const startTime = new Date(first[0]);
+    const endTime = new Date(last[0]);
+    document.getElementById('time-labels').innerHTML =
+      `<span>${startTime.toLocaleString()}</span><span>${endTime.toLocaleString()}</span>`;
+  } catch (err) {
+    console.error(err);
+  }
+}
+
+// ---------- Trade popup helpers ----------
+const tmOverlay = document.getElementById('trade-modal-overlay');
+const tmTitle = document.getElementById('tm-title');
+const tmTimerCircle = document.getElementById('tm-timer-circle');
+const tmTimerText = document.getElementById('tm-timer-text');
+const tmResult = document.getElementById('tm-result');
+const tmOpen = document.getElementById('tm-open');
+const tmLast = document.getElementById('tm-last');
+const tmDirectionLabel = document.getElementById('tm-direction-label');
+const tmAmount = document.getElementById('tm-amount');
+const tmFee = document.getElementById('tm-fee');
+const tmReturn = document.getElementById('tm-return');
+const tmOrderNumber = document.getElementById('tm-order-number');
+const tmAgainBtn = document.getElementById('tm-again-btn');
+
+function generateOrderNumber() {
+  const now = new Date();
+  const pad = (n) => String(n).padStart(2, '0');
+  const datePart = `${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+  const rand = Math.floor(10000 + Math.random() * 90000);
+  return `O${datePart}${rand}`;
+}
+
+function openTradeModal() {
+  tmOverlay.classList.add('active');
+}
+
+function closeTradeModal() {
+  tmOverlay.classList.remove('active');
+}
+
+// "Order again" resets back to the duration-selection screen (before invest section)
+tmAgainBtn.addEventListener('click', () => {
+  closeTradeModal();
+  document.getElementById('invest-section').style.display = 'none';
+  selectedDuration = null;
+  document.querySelectorAll('.duration-box').forEach(b => b.classList.remove('selected'));
+});
+
+// ---------- Trade execution (resolved by real live price movement, unless an admin forces the result) ----------
+async function fetchLivePrice(symbol) {
+  const res = await fetch(`https://api.binance.com/api/v3/ticker/price?symbol=${symbol}`);
+  const data = await res.json();
+  return parseFloat(data.price);
+}
+
+async function placeTrade(direction) {
+  if (tradeInProgress) return;
+  const amount = validateAmount();
+  if (amount === null) return;
+
+  const upBtn = document.getElementById('up-btn');
+  const downBtn = document.getElementById('down-btn');
+  const amountInput = document.getElementById('amount-input');
+  const duration = selectedDuration;
+
+  tradeInProgress = true;
+  upBtn.disabled = true;
+  downBtn.disabled = true;
+  amountInput.disabled = true;
+
+  // Deduct the stake immediately
+  const balanceAfterStake = getBalance() - amount;
+  setBalance(balanceAfterStake);
+
+  let entryPrice;
+  try {
+    entryPrice = await fetchLivePrice(currentSymbol.symbol);
+  } catch (err) {
+    setBalance(balanceAfterStake + amount); // refund
+    resetTradeButtons();
+    alert('Failed to fetch price, trade cancelled.');
+    return;
+  }
+
+  const fee = amount * FEE_RATE;
+  const expectedReturn = amount * (duration.returnPct / 100);
+  const orderNumber = generateOrderNumber();
+
+  // ---- Save the trade to Firestore so the admin panel can see / force it ----
+  let tradeDocRef = null;
+  try {
+    tradeDocRef = await firebase.firestore().collection('trades').add({
+      uid: currentUser.uid,
+      userEmail: currentUser.email || '',
+      symbol: currentSymbol.symbol,
+      direction: direction,
+      amount: amount,
+      entryPrice: entryPrice,
+      fee: fee,
+      expectedReturn: expectedReturn,
+      durationSeconds: duration.seconds,
+      orderNumber: orderNumber,
+      status: 'pending',
+      forcedResult: null,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+  } catch (e) {
+    console.error('Failed to save trade record:', e);
+  }
+
+  // ---- Show the pending popup card ----
+  tmTitle.textContent = currentSymbol.symbol.toLowerCase();
+  tmTimerCircle.style.display = 'flex';
+  tmResult.style.display = 'none';
+  tmOpen.textContent = entryPrice.toFixed(2) + ' USD';
+  tmLast.textContent = entryPrice.toFixed(2) + ' USD';
+  tmDirectionLabel.textContent = direction === 'up' ? 'Up:' : 'Down:';
+  tmAmount.textContent = amount.toFixed(0) + ' USD';
+  tmFee.textContent = fee.toFixed(2) + ' USD';
+  tmReturn.textContent = expectedReturn.toFixed(2) + 'USD';
+  tmOrderNumber.textContent = 'Order number: ' + orderNumber;
+  tmAgainBtn.style.display = 'none';
+  openTradeModal();
+
+  let remaining = duration.seconds;
+  tmTimerText.textContent = remaining + 's';
+
+  const countdownTimer = setInterval(async () => {
+    remaining -= 1;
+    if (remaining >= 0) {
+      tmTimerText.textContent = remaining + 's';
+    }
+    // refresh the live "Last price" every couple of seconds
+    if (remaining > 0 && remaining % 2 === 0) {
+      try {
+        const p = await fetchLivePrice(currentSymbol.symbol);
+        tmLast.textContent = p.toFixed(2) + ' USD';
+      } catch (e) {}
+    }
+  }, 1000);
+
+  setTimeout(async () => {
+    clearInterval(countdownTimer);
+    let exitPrice;
+    try {
+      exitPrice = await fetchLivePrice(currentSymbol.symbol);
+    } catch (err) {
+      setBalance(balanceAfterStake + amount);
+      if (tradeDocRef) {
+        tradeDocRef.update({ status: 'error', result: 'refunded' }).catch(()=>{});
+      }
+      tmTimerCircle.style.display = 'none';
+      tmResult.style.display = 'block';
+      tmResult.style.color = '#f6465d';
+      tmResult.textContent = 'Error';
+      tmAgainBtn.style.display = 'block';
+      resetTradeButtons();
+      return;
+    }
+
+    // ---- Check whether an admin has forced this trade's outcome ----
+    let forcedResult = null;
+    if (tradeDocRef) {
+      try {
+        const snap = await tradeDocRef.get();
+        if (snap.exists) forcedResult = snap.data().forcedResult || null;
+      } catch (e) {}
+    }
+
+    const wentUp = exitPrice > entryPrice;
+    const wentDown = exitPrice < entryPrice;
+    let won, tie;
+    if (forcedResult === 'win') {
+      won = true; tie = false;
+    } else if (forcedResult === 'lose') {
+      won = false; tie = false;
+    } else {
+      won = (direction === 'up' && wentUp) || (direction === 'down' && wentDown);
+      tie = exitPrice === entryPrice;
+    }
+
+    tmLast.textContent = exitPrice.toFixed(2) + ' USD';
+    tmTimerCircle.style.display = 'none';
+    tmResult.style.display = 'block';
+
+    let resultLabel;
+    if (tie) {
+      setBalance(balanceAfterStake + amount);
+      tmResult.style.color = '#f0b90b';
+      tmResult.textContent = '±0 USD';
+      resultLabel = 'tie';
+    } else if (won) {
+      const profit = expectedReturn;
+      const payout = amount + profit;
+      setBalance(balanceAfterStake + payout);
+      tmResult.style.color = '#0ecb81';
+      tmResult.textContent = '+' + profit.toFixed(0) + ' USD';
+      resultLabel = 'win';
+    } else {
+      tmResult.style.color = '#f6465d';
+      tmResult.textContent = '-' + amount.toFixed(0) + ' USD';
+      resultLabel = 'lose';
+    }
+
+    if (tradeDocRef) {
+      tradeDocRef.update({
+        exitPrice: exitPrice,
+        status: 'completed',
+        result: resultLabel,
+        resolvedAt: firebase.firestore.FieldValue.serverTimestamp()
+      }).catch(e => console.error('Failed to update trade record:', e));
+    }
+
+    tmAgainBtn.style.display = 'block';
+    resetTradeButtons();
+  }, duration.seconds * 1000);
+}
+
+function resetTradeButtons() {
+  tradeInProgress = false;
+  document.getElementById('up-btn').disabled = false;
+  document.getElementById('down-btn').disabled = false;
+  document.getElementById('amount-input').disabled = false;
+}
+
+document.getElementById('up-btn').addEventListener('click', () => placeTrade('up'));
+document.getElementById('down-btn').addEventListener('click', () => placeTrade('down'));
+
+loadTradeConfig().then(loadCoinList);
 </script>
 </body>
 </html>
