@@ -375,8 +375,8 @@
     });
   });
 
-  // ====== ১২ ঘণ্টা সেশন মেয়াদ (নতুন) ======
-  const SESSION_LIMIT_MS = 12 * 60 * 60 * 1000; // 12 hours
+  // ====== ১৫ মিনিট সেশন মেয়াদ ======
+  const SESSION_LIMIT_MS = 15 * 60 * 1000; // 15 minutes
 
   function touchActivity(){
     localStorage.setItem('support_last_activity', Date.now().toString());
@@ -401,6 +401,18 @@
 
   const chatRef = db.collection('supportChats').doc(chatId);
   const msgsRef = chatRef.collection('messages');
+
+  // ====== ট্যাব খোলা রেখে নিষ্ক্রিয় থাকলেও ১৫ মিনিট পর সেশন রিসেট ======
+  // (রিলোড ছাড়াই — একই ট্যাবে বসে থাকলেও কাজ করে)
+  setInterval(() => {
+    const last = parseInt(localStorage.getItem('support_last_activity') || '0', 10);
+    if (last && (Date.now() - last > SESSION_LIMIT_MS)) {
+      localStorage.removeItem('support_chat_id');
+      localStorage.removeItem('support_last_activity');
+      location.reload();
+    }
+  }, 20000); // প্রতি ২০ সেকেন্ডে চেক করবে
+  // =======================================================================
 
   // ====== Typing indicator (নতুন) ======
   let typingTimeout = null;
