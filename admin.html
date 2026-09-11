@@ -108,11 +108,12 @@
   <!-- TRADES -->
   <div class="panel" id="panel-trades">
     <div class="toolbar">
+      <input type="text" class="search-box" id="trades-search" placeholder="Search by Account ID...">
       <span class="count-label" id="trades-count"></span>
       <button class="refresh-btn" onclick="loadTrades()">Refresh</button>
     </div>
     <table>
-      <thead><tr><th>User</th><th>Symbol</th><th>Dir</th><th>Amount</th><th>Duration</th><th>Status</th><th>Result</th><th>Force</th></tr></thead>
+      <thead><tr><th>User</th><th>Account ID</th><th>Symbol</th><th>Dir</th><th>Amount</th><th>Duration</th><th>Status</th><th>Result</th><th>Force</th></tr></thead>
       <tbody id="trades-tbody"></tbody>
     </table>
   </div>
@@ -120,11 +121,12 @@
   <!-- DEPOSITS -->
   <div class="panel" id="panel-deposits">
     <div class="toolbar">
+      <input type="text" class="search-box" id="deposits-search" placeholder="Search by Account ID...">
       <span class="count-label" id="deposits-count"></span>
       <button class="refresh-btn" onclick="loadDeposits()">Refresh</button>
     </div>
     <table>
-      <thead><tr><th>User</th><th>Coin</th><th>Claimed</th><th>Proof</th><th>Status</th><th>Credit USDT</th><th>Action</th></tr></thead>
+      <thead><tr><th>User</th><th>Account ID</th><th>Coin</th><th>Claimed</th><th>Proof</th><th>Status</th><th>Credit USDT</th><th>Action</th></tr></thead>
       <tbody id="deposits-tbody"></tbody>
     </table>
   </div>
@@ -132,11 +134,12 @@
   <!-- WITHDRAWALS -->
   <div class="panel" id="panel-withdrawals">
     <div class="toolbar">
+      <input type="text" class="search-box" id="withdrawals-search" placeholder="Search by Account ID...">
       <span class="count-label" id="withdrawals-count"></span>
       <button class="refresh-btn" onclick="loadWithdrawals()">Refresh</button>
     </div>
     <table>
-      <thead><tr><th>User</th><th>Coin</th><th>Amount</th><th>Net</th><th>Address</th><th>Status</th><th>Action</th></tr></thead>
+      <thead><tr><th>User</th><th>Account ID</th><th>Coin</th><th>Amount</th><th>Net</th><th>Address</th><th>Status</th><th>Action</th></tr></thead>
       <tbody id="withdrawals-tbody"></tbody>
     </table>
   </div>
@@ -144,6 +147,7 @@
   <!-- SETTINGS -->
   <div class="panel" id="panel-settings">
     <div class="toolbar">
+      <input type="text" class="search-box" id="settings-search" placeholder="Search by Account ID..." disabled title="Settings aren't tied to a specific user">
       <span class="count-label">Trade duration &amp; return % (used by trade.html)</span>
       <button class="refresh-btn" onclick="loadSettings()">Refresh</button>
     </div>
@@ -207,6 +211,7 @@ function fmtDate(ts) {
 
 // ================= USERS =================
 let allUsers = []; // cached list of every loaded user, used for client-side search
+let userLookup = {}; // uid -> { accountId, email, identifier }, used by Trades/Deposits/Withdrawals
 
 async function loadUsers() {
   const tbody = document.getElementById('users-tbody');
@@ -214,16 +219,19 @@ async function loadUsers() {
   try {
     const snap = await db.collection('users').get();
     allUsers = [];
+    userLookup = {};
     snap.forEach(doc => {
       const d = doc.data();
-      allUsers.push({
+      const u = {
         uid: doc.id,
         accountId: d.accountId || doc.id,
         identifier: d.identifier || '',
         email: d.email || '',
         balance: d.balance || 0,
         winRatePercent: (typeof d.winRatePercent === 'number') ? d.winRatePercent : ''
-      });
+      };
+      allUsers.push(u);
+      userLookup[doc.id] = u;
     });
     renderUsers(allUsers);
     // Re-apply whatever search text is already in the box (e.g. after Refresh)
@@ -318,40 +326,68 @@ async function saveWinRate(uid) {
 }
 
 // ================= TRADES =================
+let allTrades = [];
+
 async function loadTrades() {
   const tbody = document.getElementById('trades-tbody');
-  tbody.innerHTML = '<tr><td colspan="8" class="empty-msg">Loading...</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="9" class="empty-msg">Loading...</td></tr>';
   try {
     const snap = await db.collection('trades').orderBy('createdAt', 'desc').limit(100).get();
-    document.getElementById('trades-count').textContent = snap.size + ' trades (latest 100)';
-    if (snap.empty) { tbody.innerHTML = '<tr><td colspan="8" class="empty-msg">No trades yet.</td></tr>'; return; }
-    tbody.innerHTML = '';
+    allTrades = [];
     snap.forEach(doc => {
       const d = doc.data();
-      const isPending = d.status === 'pending';
-      const resultBadge = d.result
-        ? `<span class="badge badge-${d.result}">${d.result}</span>`
-        : (d.forcedResult ? `<span class="badge badge-pending">forcing: ${d.forcedResult}</span>` : '-');
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td>${d.userEmail || '-'}</td>
-        <td>${d.symbol || '-'}</td>
-        <td style="color:${d.direction==='up'?'#0ecb81':'#f6465d'};font-weight:bold;">${d.direction || '-'}</td>
-        <td>${(d.amount||0).toFixed(0)}</td>
-        <td>${d.durationSeconds || '-'}s</td>
-        <td><span class="badge badge-${d.status}">${d.status}</span></td>
-        <td>${resultBadge}</td>
-        <td>
-          <button class="btn btn-win" ${isPending ? '' : 'disabled'} onclick="forceTrade('${doc.id}','win')">Force Win</button>
-          <button class="btn btn-lose" ${isPending ? '' : 'disabled'} onclick="forceTrade('${doc.id}','lose')">Force Lose</button>
-        </td>
-      `;
-      tbody.appendChild(tr);
+      const u = userLookup[d.uid];
+      allTrades.push({ id: doc.id, ...d, accountId: u ? u.accountId : (d.uid || '-') });
     });
+    renderTrades(allTrades);
+    const searchVal = document.getElementById('trades-search').value;
+    if (searchVal.trim()) filterTrades();
   } catch (e) {
-    tbody.innerHTML = `<tr><td colspan="8" class="empty-msg">Failed to load: ${e.message}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="9" class="empty-msg">Failed to load: ${e.message}</td></tr>`;
   }
 }
+
+function renderTrades(list) {
+  const tbody = document.getElementById('trades-tbody');
+  document.getElementById('trades-count').textContent =
+    list.length === allTrades.length ? (allTrades.length + ' trades (latest 100)') : (list.length + ' of ' + allTrades.length + ' trades');
+
+  if (list.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="9" class="empty-msg">No matching trades found.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = '';
+  list.forEach(d => {
+    const isPending = d.status === 'pending';
+    const resultBadge = d.result
+      ? `<span class="badge badge-${d.result}">${d.result}</span>`
+      : (d.forcedResult ? `<span class="badge badge-pending">forcing: ${d.forcedResult}</span>` : '-');
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${d.userEmail || '-'}</td>
+      <td style="font-size:10px;color:#5b6169;word-break:break-all;">${d.accountId}</td>
+      <td>${d.symbol || '-'}</td>
+      <td style="color:${d.direction==='up'?'#0ecb81':'#f6465d'};font-weight:bold;">${d.direction || '-'}</td>
+      <td>${(d.amount||0).toFixed(0)}</td>
+      <td>${d.durationSeconds || '-'}s</td>
+      <td><span class="badge badge-${d.status}">${d.status}</span></td>
+      <td>${resultBadge}</td>
+      <td>
+        <button class="btn btn-win" ${isPending ? '' : 'disabled'} onclick="forceTrade('${d.id}','win')">Force Win</button>
+        <button class="btn btn-lose" ${isPending ? '' : 'disabled'} onclick="forceTrade('${d.id}','lose')">Force Lose</button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function filterTrades() {
+  const q = document.getElementById('trades-search').value.trim().toLowerCase();
+  if (!q) { renderTrades(allTrades); return; }
+  renderTrades(allTrades.filter(d => (d.accountId || '').toLowerCase().includes(q)));
+}
+document.getElementById('trades-search').addEventListener('input', filterTrades);
 
 async function forceTrade(tradeId, outcome) {
   try {
@@ -363,36 +399,64 @@ async function forceTrade(tradeId, outcome) {
 }
 
 // ================= DEPOSITS =================
+let allDeposits = [];
+
 async function loadDeposits() {
   const tbody = document.getElementById('deposits-tbody');
-  tbody.innerHTML = '<tr><td colspan="7" class="empty-msg">Loading...</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="8" class="empty-msg">Loading...</td></tr>';
   try {
     const snap = await db.collection('deposits').orderBy('createdAt', 'desc').limit(100).get();
-    document.getElementById('deposits-count').textContent = snap.size + ' deposits (latest 100)';
-    if (snap.empty) { tbody.innerHTML = '<tr><td colspan="7" class="empty-msg">No deposits yet.</td></tr>'; return; }
-    tbody.innerHTML = '';
+    allDeposits = [];
     snap.forEach(doc => {
       const d = doc.data();
-      const isPending = d.status === 'pending';
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td>${d.userEmail || '-'}</td>
-        <td>${d.symbol || '-'}</td>
-        <td>${d.claimedAmount || 0}</td>
-        <td>${d.proofUrl ? `<a class="proof-link" href="${d.proofUrl}" target="_blank">View</a>` : '-'}</td>
-        <td><span class="badge badge-${d.status}">${d.status}</span></td>
-        <td><input type="number" class="mini-input" placeholder="${d.claimedAmount || 0}" id="dep-${doc.id}" ${isPending ? '' : 'disabled'}></td>
-        <td>
-          <button class="btn btn-approve" ${isPending ? '' : 'disabled'} onclick="approveDeposit('${doc.id}','${d.uid}')">Approve</button>
-          <button class="btn btn-reject" ${isPending ? '' : 'disabled'} onclick="rejectDeposit('${doc.id}')">Reject</button>
-        </td>
-      `;
-      tbody.appendChild(tr);
+      const u = userLookup[d.uid];
+      allDeposits.push({ id: doc.id, ...d, accountId: u ? u.accountId : (d.uid || '-') });
     });
+    renderDeposits(allDeposits);
+    const searchVal = document.getElementById('deposits-search').value;
+    if (searchVal.trim()) filterDeposits();
   } catch (e) {
-    tbody.innerHTML = `<tr><td colspan="7" class="empty-msg">Failed to load: ${e.message}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="8" class="empty-msg">Failed to load: ${e.message}</td></tr>`;
   }
 }
+
+function renderDeposits(list) {
+  const tbody = document.getElementById('deposits-tbody');
+  document.getElementById('deposits-count').textContent =
+    list.length === allDeposits.length ? (allDeposits.length + ' deposits (latest 100)') : (list.length + ' of ' + allDeposits.length + ' deposits');
+
+  if (list.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="8" class="empty-msg">No matching deposits found.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = '';
+  list.forEach(d => {
+    const isPending = d.status === 'pending';
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${d.userEmail || '-'}</td>
+      <td style="font-size:10px;color:#5b6169;word-break:break-all;">${d.accountId}</td>
+      <td>${d.symbol || '-'}</td>
+      <td>${d.claimedAmount || 0}</td>
+      <td>${d.proofUrl ? `<a class="proof-link" href="${d.proofUrl}" target="_blank">View</a>` : '-'}</td>
+      <td><span class="badge badge-${d.status}">${d.status}</span></td>
+      <td><input type="number" class="mini-input" placeholder="${d.claimedAmount || 0}" id="dep-${d.id}" ${isPending ? '' : 'disabled'}></td>
+      <td>
+        <button class="btn btn-approve" ${isPending ? '' : 'disabled'} onclick="approveDeposit('${d.id}','${d.uid}')">Approve</button>
+        <button class="btn btn-reject" ${isPending ? '' : 'disabled'} onclick="rejectDeposit('${d.id}')">Reject</button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function filterDeposits() {
+  const q = document.getElementById('deposits-search').value.trim().toLowerCase();
+  if (!q) { renderDeposits(allDeposits); return; }
+  renderDeposits(allDeposits.filter(d => (d.accountId || '').toLowerCase().includes(q)));
+}
+document.getElementById('deposits-search').addEventListener('input', filterDeposits);
 
 async function approveDeposit(depositId, uid) {
   const input = document.getElementById('dep-' + depositId);
@@ -422,36 +486,64 @@ async function rejectDeposit(depositId) {
 }
 
 // ================= WITHDRAWALS =================
+let allWithdrawals = [];
+
 async function loadWithdrawals() {
   const tbody = document.getElementById('withdrawals-tbody');
-  tbody.innerHTML = '<tr><td colspan="7" class="empty-msg">Loading...</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="8" class="empty-msg">Loading...</td></tr>';
   try {
     const snap = await db.collection('withdrawals').orderBy('createdAt', 'desc').limit(100).get();
-    document.getElementById('withdrawals-count').textContent = snap.size + ' withdrawals (latest 100)';
-    if (snap.empty) { tbody.innerHTML = '<tr><td colspan="7" class="empty-msg">No withdrawals yet.</td></tr>'; return; }
-    tbody.innerHTML = '';
+    allWithdrawals = [];
     snap.forEach(doc => {
       const d = doc.data();
-      const isPending = d.status === 'pending';
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td>${d.userEmail || '-'}</td>
-        <td>${d.symbol || '-'}</td>
-        <td>${(d.amount||0).toFixed(2)}</td>
-        <td>${(d.netAmount||0).toFixed(2)}</td>
-        <td style="font-size:10px;word-break:break-all;">${d.address || '-'}</td>
-        <td><span class="badge badge-${d.status}">${d.status}</span></td>
-        <td>
-          <button class="btn btn-approve" ${isPending ? '' : 'disabled'} onclick="approveWithdrawal('${doc.id}')">Approve</button>
-          <button class="btn btn-reject" ${isPending ? '' : 'disabled'} onclick="rejectWithdrawal('${doc.id}','${d.uid}',${d.amount||0})">Reject &amp; Refund</button>
-        </td>
-      `;
-      tbody.appendChild(tr);
+      const u = userLookup[d.uid];
+      allWithdrawals.push({ id: doc.id, ...d, accountId: u ? u.accountId : (d.uid || '-') });
     });
+    renderWithdrawals(allWithdrawals);
+    const searchVal = document.getElementById('withdrawals-search').value;
+    if (searchVal.trim()) filterWithdrawals();
   } catch (e) {
-    tbody.innerHTML = `<tr><td colspan="7" class="empty-msg">Failed to load: ${e.message}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="8" class="empty-msg">Failed to load: ${e.message}</td></tr>`;
   }
 }
+
+function renderWithdrawals(list) {
+  const tbody = document.getElementById('withdrawals-tbody');
+  document.getElementById('withdrawals-count').textContent =
+    list.length === allWithdrawals.length ? (allWithdrawals.length + ' withdrawals (latest 100)') : (list.length + ' of ' + allWithdrawals.length + ' withdrawals');
+
+  if (list.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="8" class="empty-msg">No matching withdrawals found.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = '';
+  list.forEach(d => {
+    const isPending = d.status === 'pending';
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${d.userEmail || '-'}</td>
+      <td style="font-size:10px;color:#5b6169;word-break:break-all;">${d.accountId}</td>
+      <td>${d.symbol || '-'}</td>
+      <td>${(d.amount||0).toFixed(2)}</td>
+      <td>${(d.netAmount||0).toFixed(2)}</td>
+      <td style="font-size:10px;word-break:break-all;">${d.address || '-'}</td>
+      <td><span class="badge badge-${d.status}">${d.status}</span></td>
+      <td>
+        <button class="btn btn-approve" ${isPending ? '' : 'disabled'} onclick="approveWithdrawal('${d.id}')">Approve</button>
+        <button class="btn btn-reject" ${isPending ? '' : 'disabled'} onclick="rejectWithdrawal('${d.id}','${d.uid}',${d.amount||0})">Reject &amp; Refund</button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function filterWithdrawals() {
+  const q = document.getElementById('withdrawals-search').value.trim().toLowerCase();
+  if (!q) { renderWithdrawals(allWithdrawals); return; }
+  renderWithdrawals(allWithdrawals.filter(d => (d.accountId || '').toLowerCase().includes(q)));
+}
+document.getElementById('withdrawals-search').addEventListener('input', filterWithdrawals);
 
 async function approveWithdrawal(withdrawalId) {
   try {
