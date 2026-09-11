@@ -49,6 +49,8 @@
   .chat-header .title{font-weight:600;font-size:15px;}
   .chat-header .status{font-size:12px;color:#16C784;display:flex;align-items:center;gap:5px;}
   .chat-header .status::before{content:"";width:6px;height:6px;border-radius:50%;background:#16C784;}
+  .chat-header .status.typing{color:var(--gold);}
+  .chat-header .status.typing::before{background:var(--gold);}
   .chat-header .back{
     background:none;border:none;color:var(--text-dim);
     font-size:22px;cursor:pointer;line-height:1;
@@ -306,6 +308,18 @@
   const chatRef = db.collection('supportChats').doc(chatId);
   const msgsRef = chatRef.collection('messages');
 
+  // ====== Typing indicator (নতুন) ======
+  let typingTimeout = null;
+
+  msgInput.addEventListener('input', () => {
+    chatRef.set({ customerTyping: true }, { merge: true });
+    clearTimeout(typingTimeout);
+    typingTimeout = setTimeout(() => {
+      chatRef.set({ customerTyping: false }, { merge: true });
+    }, 1500);
+  });
+  // ======================================
+
   function fmtTime(ts) {
     if (!ts) return '';
     const d = ts.toDate ? ts.toDate() : new Date();
@@ -342,6 +356,20 @@
         renderMessage(m.sender, m.text, m.timestamp);
       });
     });
+
+    // ====== Typing indicator শোনা (adminTyping) ======
+    chatRef.onSnapshot(doc => {
+      const d = doc.data();
+      if (!d) return;
+      if (d.adminTyping) {
+        statusLabel.textContent = 'Typing…';
+        statusLabel.classList.add('typing');
+      } else {
+        statusLabel.textContent = 'Online';
+        statusLabel.classList.remove('typing');
+      }
+    });
+    // ===================================================
   }
 
   startBtn.addEventListener('click', () => {
@@ -355,6 +383,9 @@
     const text = msgInput.value.trim();
     if (!text) return;
     msgInput.value = '';
+
+    clearTimeout(typingTimeout);
+
     msgsRef.add({
       sender: 'customer',
       text: text,
@@ -363,7 +394,8 @@
     chatRef.set({
       lastMessage: text,
       lastMessageAt: firebase.firestore.FieldValue.serverTimestamp(),
-      unreadByAdmin: firebase.firestore.FieldValue.increment(1)
+      unreadByAdmin: firebase.firestore.FieldValue.increment(1),
+      customerTyping: false
     }, { merge: true });
   }
 
