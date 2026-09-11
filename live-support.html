@@ -308,6 +308,11 @@
     topicsPanel.style.display = (topicsPanel.style.display === 'none') ? 'block' : 'none';
   });
 
+  // ইনপুট বক্সে ক্লিক/ফোকাস করলে Topics প্যানেল স্বয়ংক্রিয়ভাবে লুকানো (নতুন)
+  msgInput.addEventListener('focus', () => {
+    topicsPanel.style.display = 'none';
+  });
+
   document.querySelectorAll('.topic-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       msgInput.value = btn.dataset.topic;
