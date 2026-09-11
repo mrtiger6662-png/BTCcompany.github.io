@@ -479,6 +479,7 @@ const intervalSelect = document.getElementById('interval-select');
 
 let currentSymbol = null;
 let refreshTimer = null;
+let priceRefreshTimer = null;
 let tradeInProgress = false;
 
 function iconUrl(icon) {
@@ -513,14 +514,48 @@ async function loadCoinList() {
           </div>
         </div>
         <div class="coin-right">
-          <div class="coin-price">$${price.toLocaleString(undefined,{maximumFractionDigits:4})}</div>
-          <div class="${up?'change-up':'change-down'}">${up?'+':''}${changePercent.toFixed(2)}%</div>
+          <div class="coin-price" id="price-${coin.symbol}">$${price.toLocaleString(undefined,{maximumFractionDigits:4})}</div>
+          <div class="${up?'change-up':'change-down'}" id="change-${coin.symbol}">${up?'+':''}${changePercent.toFixed(2)}%</div>
         </div>`;
       row.addEventListener('click', () => openChart(coin));
       listView.appendChild(row);
     });
+
+    // Start the smooth, in-place price refresh only after the initial list has rendered.
+    clearInterval(priceRefreshTimer);
+    priceRefreshTimer = setInterval(refreshCoinPrices, 2000);
   } catch (err) {
     listView.innerHTML = '<p style="text-align:center;color:#f6465d;padding:20px;">Could not load coin list.</p>';
+  }
+}
+
+// Updates only the price/percentage text of each row already on screen.
+// No innerHTML rebuild, no loading screen — avoids the flicker.
+async function refreshCoinPrices() {
+  // Don't refresh the list while the user is looking at a coin's chart page.
+  if (listView.style.display === 'none') return;
+  try {
+    const symbolsParam = encodeURIComponent(JSON.stringify(coinList.map(c => c.symbol)));
+    const res = await fetch('https://api.binance.com/api/v3/ticker/24hr?symbols=' + symbolsParam);
+    const tickers = await res.json();
+
+    coinList.forEach(coin => {
+      const t = tickers.find(x => x.symbol === coin.symbol);
+      if (!t) return;
+      const priceEl = document.getElementById('price-' + coin.symbol);
+      const changeEl = document.getElementById('change-' + coin.symbol);
+      if (!priceEl || !changeEl) return; // row not rendered (e.g. list failed earlier)
+
+      const changePercent = parseFloat(t.priceChangePercent);
+      const up = changePercent >= 0;
+      const price = parseFloat(t.lastPrice);
+
+      priceEl.textContent = '$' + price.toLocaleString(undefined,{maximumFractionDigits:4});
+      changeEl.textContent = (up?'+':'') + changePercent.toFixed(2) + '%';
+      changeEl.className = up ? 'change-up' : 'change-down';
+    });
+  } catch (err) {
+    // Silently skip this cycle on a network hiccup; next interval will retry.
   }
 }
 
