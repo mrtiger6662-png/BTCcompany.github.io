@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="bn">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Support Admin Panel</title>
+<title>Admin - Live Support</title>
 <style>
   :root{
     --bg:#0B0D12;
@@ -15,99 +15,246 @@
     --text-dim:#8B93A7;
     --bubble-customer:#1E2330;
     --bubble-admin:#F0B90B;
-    --danger:#EA3943;
+    --bubble-admin-text:#12151D;
+    --danger:#F6465D;
+    --online:#16C784;
   }
   *{box-sizing:border-box;}
-  html,body{margin:0;height:100%;background:var(--bg);color:var(--text);
-    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans Bengali",sans-serif;}
-  .app{display:flex;height:100vh;}
+  html,body{
+    margin:0;height:100%;
+    background:var(--bg);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans Bengali",sans-serif;
+    color:var(--text);
+  }
 
-  /* ---- sidebar : conversation list ---- */
+  /* ===== Password gate ===== */
+  .auth-gate{
+    height:100vh;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:16px;
+    padding:24px;
+  }
+  .auth-gate .logo{
+    width:56px;height:56px;border-radius:50%;
+    background:var(--gold);display:flex;align-items:center;justify-content:center;
+    font-size:26px;margin-bottom:6px;
+  }
+  .auth-gate h2{margin:0;font-size:19px;}
+  .auth-gate p{margin:0;color:var(--text-dim);font-size:13px;text-align:center;}
+  .auth-gate input{
+    width:100%;max-width:300px;
+    background:var(--panel-2);
+    border:1px solid var(--border);
+    border-radius:10px;
+    padding:13px 14px;
+    color:var(--text);
+    font-size:14px;
+    outline:none;
+  }
+  .auth-gate input:focus{border-color:var(--gold);}
+  .auth-gate button{
+    width:100%;max-width:300px;
+    background:var(--gold);
+    color:#12151D;
+    border:none;
+    border-radius:10px;
+    padding:13px;
+    font-weight:700;
+    font-size:14px;
+    cursor:pointer;
+  }
+  .auth-error{color:var(--danger);font-size:12.5px;min-height:16px;}
+
+  /* ===== App shell ===== */
+  .app{
+    display:none;
+    height:100vh;
+    grid-template-columns:320px 1fr;
+  }
+  @media(min-width:1px){ .app{ display:grid; } }
+  .app.hidden{display:none !important;}
+
   .sidebar{
-    width:320px;flex-shrink:0;
     background:var(--panel);
     border-right:1px solid var(--border);
-    display:flex;flex-direction:column;
+    display:flex;
+    flex-direction:column;
+    min-width:0;
   }
   .sidebar-header{
-    padding:18px 16px;border-bottom:1px solid var(--border);
-    display:flex;align-items:center;justify-content:space-between;
-  }
-  .sidebar-header h1{font-size:16px;margin:0;}
-  .sidebar-header .badge{
-    background:var(--danger);color:#fff;font-size:11px;font-weight:700;
-    padding:2px 8px;border-radius:10px;
-  }
-  .conv-list{flex:1;overflow-y:auto;}
-  .conv-item{
-    display:flex;gap:10px;padding:13px 16px;cursor:pointer;
+    display:flex;align-items:center;gap:10px;
+    padding:16px 16px;
     border-bottom:1px solid var(--border);
-    align-items:center;
+    background:var(--panel-2);
   }
-  .conv-item:hover{background:var(--panel-2);}
-  .conv-item.active{background:var(--panel-2);border-left:3px solid var(--gold);}
-  .conv-item .avatar{
-    width:36px;height:36px;border-radius:50%;background:#242938;
-    display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;
-    color:var(--gold);flex-shrink:0;
+  .sidebar-header .avatar{
+    width:34px;height:34px;border-radius:50%;
+    background:var(--gold);display:flex;align-items:center;justify-content:center;font-size:16px;
   }
-  .conv-item .info{flex:1;min-width:0;}
-  .conv-item .info .name{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-  .conv-item .info .preview{font-size:12px;color:var(--text-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-  .conv-item .unread{
-    background:var(--gold);color:#12151D;font-size:11px;font-weight:700;
-    border-radius:10px;padding:1px 7px;flex-shrink:0;
+  .sidebar-header .title{font-weight:700;font-size:14px;}
+  .sidebar-header .sub{font-size:11px;color:var(--online);}
+  .logout-btn{
+    margin-left:auto;background:none;border:1px solid var(--border);
+    color:var(--text-dim);border-radius:8px;padding:6px 10px;font-size:11.5px;cursor:pointer;
   }
-  .empty-list{padding:24px 16px;color:var(--text-dim);font-size:13px;text-align:center;}
+  .logout-btn:hover{border-color:var(--danger);color:var(--danger);}
 
-  /* ---- main chat area ---- */
-  .main{flex:1;display:flex;flex-direction:column;min-width:0;}
-  .main .chat-header{
-    padding:16px 20px;border-bottom:1px solid var(--border);background:var(--panel-2);
-    display:flex;align-items:center;gap:12px;
+  .search-box{padding:10px 12px;border-bottom:1px solid var(--border);}
+  .search-box input{
+    width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;
+    padding:9px 12px;color:var(--text);font-size:13px;outline:none;
   }
-  .main .chat-header .name{font-weight:600;font-size:15px;}
-  .main .chat-header .sub{font-size:12px;color:var(--text-dim);}
+  .search-box input:focus{border-color:var(--gold);}
+
+  .chat-list{flex:1;overflow-y:auto;}
+  .chat-item{
+    display:flex;gap:10px;align-items:flex-start;
+    padding:13px 14px;border-bottom:1px solid var(--border);
+    cursor:pointer;position:relative;
+  }
+  .chat-item:hover{background:var(--panel-2);}
+  .chat-item.active{background:var(--panel-2);border-left:3px solid var(--gold);}
+  .chat-item .ci-avatar{
+    width:36px;height:36px;border-radius:50%;flex-shrink:0;
+    background:var(--bubble-customer);display:flex;align-items:center;justify-content:center;
+    font-size:14px;font-weight:700;color:var(--gold);
+  }
+  .chat-item .ci-body{min-width:0;flex:1;}
+  .chat-item .ci-name{font-size:13.5px;font-weight:600;display:flex;justify-content:space-between;gap:6px;}
+  .chat-item .ci-time{font-size:10.5px;color:var(--text-dim);font-weight:400;}
+  .chat-item .ci-last{
+    font-size:12px;color:var(--text-dim);margin-top:3px;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  }
+  .unread-badge{
+    background:var(--gold);color:#12151D;font-size:10px;font-weight:800;
+    border-radius:999px;min-width:18px;height:18px;display:flex;align-items:center;justify-content:center;
+    padding:0 5px;flex-shrink:0;
+  }
+  .empty-list{padding:30px 16px;color:var(--text-dim);font-size:13px;text-align:center;}
+
+  /* ===== Chat panel ===== */
+  .chat-panel{display:flex;flex-direction:column;min-width:0;background:var(--panel);}
+  .chat-panel-header{
+    display:flex;align-items:center;gap:12px;
+    padding:16px 18px;border-bottom:1px solid var(--border);background:var(--panel-2);
+  }
+  .chat-panel-header .cph-avatar{
+    width:38px;height:38px;border-radius:50%;background:var(--bubble-customer);
+    display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--gold);
+  }
+  .chat-panel-header .cph-name{font-weight:700;font-size:14.5px;}
+  .chat-panel-header .cph-sub{font-size:11.5px;color:var(--text-dim);}
+  .resolve-btn{
+    margin-left:auto;background:none;border:1px solid var(--border);color:var(--text-dim);
+    border-radius:8px;padding:7px 12px;font-size:12px;cursor:pointer;
+  }
+  .resolve-btn:hover{border-color:var(--online);color:var(--online);}
+
   .messages{flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:10px;}
-  .msg{max-width:60%;padding:10px 14px;border-radius:14px;font-size:14px;line-height:1.45;word-wrap:break-word;}
-  .msg.customer{align-self:flex-start;background:var(--bubble-customer);border-bottom-left-radius:4px;}
-  .msg.admin{align-self:flex-end;background:var(--bubble-admin);color:#12151D;border-bottom-right-radius:4px;}
+  .msg{max-width:65%;padding:10px 14px;border-radius:14px;font-size:14px;line-height:1.45;word-wrap:break-word;}
+  .msg.customer{align-self:flex-start;background:var(--bubble-customer);color:var(--text);border-bottom-left-radius:4px;}
+  .msg.admin{align-self:flex-end;background:var(--bubble-admin);color:var(--bubble-admin-text);border-bottom-right-radius:4px;}
   .msg .time{display:block;font-size:10px;opacity:.6;margin-top:4px;}
+
   .composer{display:flex;gap:8px;padding:14px;border-top:1px solid var(--border);background:var(--panel-2);}
   .composer input{
     flex:1;background:var(--bg);border:1px solid var(--border);border-radius:22px;
-    padding:11px 16px;color:var(--text);font-size:14px;outline:none;
+    padding:12px 16px;color:var(--text);font-size:14px;outline:none;
   }
   .composer input:focus{border-color:var(--gold);}
   .composer button{
     background:var(--gold);color:#12151D;border:none;border-radius:50%;
-    width:42px;height:42px;font-size:16px;cursor:pointer;flex-shrink:0;
+    width:44px;height:44px;font-size:16px;cursor:pointer;flex-shrink:0;
   }
-  .placeholder{flex:1;display:flex;align-items:center;justify-content:center;color:var(--text-dim);font-size:14px;}
+  .composer button:disabled{opacity:.5;cursor:default;}
+
+  .no-chat-selected{
+    flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    color:var(--text-dim);gap:8px;
+  }
+  .no-chat-selected .big{font-size:34px;}
+
+  @media(max-width:760px){
+    .app{grid-template-columns:1fr;}
+    .sidebar{position:fixed;inset:0;z-index:5;transition:transform .25s;}
+    .sidebar.slide-out{transform:translateX(-100%);}
+    .chat-panel{position:relative;}
+    .back-to-list{
+      display:inline-flex;background:none;border:none;color:var(--text-dim);
+      font-size:20px;cursor:pointer;margin-right:2px;
+    }
+  }
+  .back-to-list{display:none;}
+  @media(max-width:760px){ .back-to-list{display:inline-flex;} }
 </style>
 </head>
 <body>
 
-<div class="app">
-  <div class="sidebar">
+<!-- ===== Password Gate ===== -->
+<div class="auth-gate" id="authGate">
+  <div class="logo">🔒</div>
+  <h2>Admin Login</h2>
+  <p>এডমিন প্যানেলে ঢুকতে পাসওয়ার্ড দিন</p>
+  <input id="adminPassInput" type="password" placeholder="Admin password" autocomplete="off">
+  <button id="adminLoginBtn">Login</button>
+  <div class="auth-error" id="authError"></div>
+</div>
+
+<!-- ===== Admin App ===== -->
+<div class="app hidden" id="appShell">
+  <!-- Sidebar: chat list -->
+  <div class="sidebar" id="sidebar">
     <div class="sidebar-header">
-      <h1>গ্রাহক চ্যাট</h1>
-      <span class="badge" id="totalUnread" style="display:none;">0</span>
+      <div class="avatar">🎧</div>
+      <div>
+        <div class="title">Support Inbox</div>
+        <div class="sub" id="chatCountLabel">0 active chats</div>
+      </div>
+      <button class="logout-btn" id="logoutBtn">Logout</button>
     </div>
-    <div class="conv-list" id="convList">
-      <div class="empty-list">কোনো চ্যাট নেই এখনো…</div>
+    <div class="search-box">
+      <input id="searchInput" type="text" placeholder="নাম দিয়ে খুঁজুন...">
+    </div>
+    <div class="chat-list" id="chatList">
+      <div class="empty-list">লোড হচ্ছে…</div>
     </div>
   </div>
 
-  <div class="main" id="mainArea">
-    <div class="placeholder">কথোপকথন দেখতে বামদিক থেকে একজন গ্রাহক বাছাই করুন</div>
+  <!-- Chat panel -->
+  <div class="chat-panel" id="chatPanel">
+    <div class="no-chat-selected" id="noChatSelected">
+      <div class="big">💬</div>
+      <div>বাম পাশ থেকে একটি চ্যাট সিলেক্ট করুন</div>
+    </div>
+
+    <div id="activeChatView" style="display:none;flex-direction:column;height:100%;">
+      <div class="chat-panel-header">
+        <button class="back-to-list" id="backToList">←</button>
+        <div class="cph-avatar" id="cphAvatar">?</div>
+        <div>
+          <div class="cph-name" id="cphName">—</div>
+          <div class="cph-sub" id="cphSub">—</div>
+        </div>
+        <button class="resolve-btn" id="resolveBtn">Mark as resolved</button>
+      </div>
+      <div class="messages" id="messages"></div>
+      <div class="composer">
+        <input id="msgInput" type="text" placeholder="উত্তর লিখুন…" maxlength="1000">
+        <button id="sendBtn">➤</button>
+      </div>
+    </div>
   </div>
 </div>
 
+<!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
 <script>
-  // ====== এখানে ঠিক একই Firebase কনফিগ বসান, যেটা live-support.html এ আছে ======
+  // ====== ১. এখানে সেই একই Firebase কনফিগ (live-support.html এর মতো) ======
   const firebaseConfig = {
     apiKey: "AIzaSyDJoPr8RvE1xkNTKRr5kwTx6E51GCMn_HE",
     authDomain: "abc-company-6272a.firebaseapp.com",
@@ -116,124 +263,199 @@
     messagingSenderId: "1026212780106",
     appId: "1:1026212780106:web:985ec1bc35837d6320eeb3"
   };
-  // ============================================================================
+
+  // ====== ২. এডমিন পাসওয়ার্ড এখানে পরিবর্তন করুন ======
+  const ADMIN_PASSWORD = "changeme123";
+  // =========================================================
 
   firebase.initializeApp(firebaseConfig);
   const db = firebase.firestore();
 
-  const convList   = document.getElementById('convList');
-  const mainArea   = document.getElementById('mainArea');
-  const totalBadge = document.getElementById('totalUnread');
+  // ---------- Elements ----------
+  const authGate       = document.getElementById('authGate');
+  const adminPassInput = document.getElementById('adminPassInput');
+  const adminLoginBtn  = document.getElementById('adminLoginBtn');
+  const authError      = document.getElementById('authError');
+  const appShell        = document.getElementById('appShell');
+  const chatList         = document.getElementById('chatList');
+  const chatCountLabel   = document.getElementById('chatCountLabel');
+  const searchInput      = document.getElementById('searchInput');
+  const noChatSelected    = document.getElementById('noChatSelected');
+  const activeChatView    = document.getElementById('activeChatView');
+  const cphAvatar = document.getElementById('cphAvatar');
+  const cphName   = document.getElementById('cphName');
+  const cphSub    = document.getElementById('cphSub');
+  const resolveBtn= document.getElementById('resolveBtn');
+  const messagesEl = document.getElementById('messages');
+  const msgInput   = document.getElementById('msgInput');
+  const sendBtn    = document.getElementById('sendBtn');
+  const logoutBtn  = document.getElementById('logoutBtn');
+  const sidebar    = document.getElementById('sidebar');
+  const backToList = document.getElementById('backToList');
 
+  let allChats = [];
   let activeChatId = null;
-  let unsubMessages = null;
+  let unsubscribeMessages = null;
 
-  // --- conversation list, live updated, newest first ---
-  db.collection('supportChats').orderBy('lastMessageAt', 'desc')
-    .onSnapshot(snap => {
-      if (snap.empty) {
-        convList.innerHTML = '<div class="empty-list">কোনো চ্যাট নেই এখনো…</div>';
-        totalBadge.style.display = 'none';
-        return;
-      }
-      convList.innerHTML = '';
-      let totalUnread = 0;
+  // ---------- Auth (client-side gate) ----------
+  function tryLogin(){
+    const val = adminPassInput.value;
+    if (val === ADMIN_PASSWORD){
+      sessionStorage.setItem('admin_authed', '1');
+      authGate.style.display = 'none';
+      appShell.classList.remove('hidden');
+      initInbox();
+    } else {
+      authError.textContent = 'পাসওয়ার্ড সঠিক নয়।';
+    }
+  }
+  adminLoginBtn.addEventListener('click', tryLogin);
+  adminPassInput.addEventListener('keydown', e => { if (e.key === 'Enter') tryLogin(); });
 
-      snap.forEach(doc => {
-        const c = doc.data();
-        const unread = c.unreadByAdmin || 0;
-        totalUnread += unread;
+  logoutBtn.addEventListener('click', () => {
+    sessionStorage.removeItem('admin_authed');
+    location.reload();
+  });
 
-        const item = document.createElement('div');
-        item.className = 'conv-item' + (doc.id === activeChatId ? ' active' : '');
-        const initial = (c.customerName || '?').charAt(0).toUpperCase();
-        item.innerHTML = `
-          <div class="avatar">${initial}</div>
-          <div class="info">
-            <div class="name">${c.customerName || 'গ্রাহক'}</div>
-            <div class="preview">${(c.lastMessage || '')}</div>
-          </div>
-          ${unread > 0 ? `<div class="unread">${unread}</div>` : ''}
-        `;
-        item.addEventListener('click', () => openChat(doc.id, c.customerName));
-        convList.appendChild(item);
-      });
-
-      if (totalUnread > 0) {
-        totalBadge.style.display = 'inline-block';
-        totalBadge.textContent = totalUnread;
-        document.title = `(${totalUnread}) Support Admin Panel`;
-      } else {
-        totalBadge.style.display = 'none';
-        document.title = 'Support Admin Panel';
-      }
-    });
-
-  function fmtTime(ts) {
-    if (!ts) return '';
-    const d = ts.toDate ? ts.toDate() : new Date();
-    return d.toLocaleTimeString('bn-BD', { hour: '2-digit', minute: '2-digit' });
+  if (sessionStorage.getItem('admin_authed') === '1'){
+    authGate.style.display = 'none';
+    appShell.classList.remove('hidden');
+    initInbox();
   }
 
-  function openChat(chatId, name) {
-    activeChatId = chatId;
+  // ---------- Inbox ----------
+  let inboxInitialized = false;
+  function initInbox(){
+    if (inboxInitialized) return;
+    inboxInitialized = true;
 
-    // read receipt: unread কাউন্ট রিসেট করা
-    db.collection('supportChats').doc(chatId).set({ unreadByAdmin: 0 }, { merge: true });
-
-    mainArea.innerHTML = `
-      <div class="chat-header">
-        <div>
-          <div class="name">${name || 'গ্রাহক'}</div>
-          <div class="sub">Chat ID: ${chatId}</div>
-        </div>
-      </div>
-      <div class="messages" id="msgArea"></div>
-      <div class="composer">
-        <input id="replyInput" type="text" placeholder="রিপ্লাই লিখুন…" maxlength="1000">
-        <button id="replyBtn">➤</button>
-      </div>
-    `;
-
-    const msgArea    = document.getElementById('msgArea');
-    const replyInput = document.getElementById('replyInput');
-    const replyBtn   = document.getElementById('replyBtn');
-
-    if (unsubMessages) unsubMessages(); // আগের চ্যাটের listener বন্ধ করা
-
-    unsubMessages = db.collection('supportChats').doc(chatId).collection('messages')
-      .orderBy('timestamp')
+    db.collection('supportChats')
+      .orderBy('lastMessageAt', 'desc')
       .onSnapshot(snap => {
-        msgArea.innerHTML = '';
-        snap.forEach(d => {
-          const m = d.data();
-          const div = document.createElement('div');
-          div.className = 'msg ' + m.sender;
-          div.innerHTML = (m.text || '').replace(/</g,'&lt;') + '<span class="time">' + fmtTime(m.timestamp) + '</span>';
-          msgArea.appendChild(div);
-        });
-        msgArea.scrollTop = msgArea.scrollHeight;
+        allChats = [];
+        snap.forEach(doc => allChats.push({ id: doc.id, ...doc.data() }));
+        renderChatList();
+      }, err => {
+        chatList.innerHTML = '<div class="empty-list">লোড করতে সমস্যা হয়েছে।<br>Firestore rules চেক করুন।</div>';
+        console.error(err);
       });
+  }
 
-    function sendReply() {
-      const text = replyInput.value.trim();
-      if (!text) return;
-      replyInput.value = '';
-      db.collection('supportChats').doc(chatId).collection('messages').add({
-        sender: 'admin',
-        text: text,
-        timestamp: firebase.firestore.FieldValue.serverTimestamp()
-      });
-      db.collection('supportChats').doc(chatId).set({
-        lastMessage: text,
-        lastMessageAt: firebase.firestore.FieldValue.serverTimestamp()
-      }, { merge: true });
+  function initials(name){
+    if (!name) return '?';
+    return name.trim().charAt(0).toUpperCase();
+  }
+
+  function fmtTime(ts){
+    if (!ts || !ts.toDate) return '';
+    const d = ts.toDate();
+    return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+  }
+
+  function renderChatList(){
+    const q = searchInput.value.trim().toLowerCase();
+    const filtered = allChats.filter(c => (c.customerName || '').toLowerCase().includes(q));
+
+    chatCountLabel.textContent = allChats.length + ' active chat' + (allChats.length === 1 ? '' : 's');
+
+    if (filtered.length === 0){
+      chatList.innerHTML = '<div class="empty-list">কোনো চ্যাট পাওয়া যায়নি।</div>';
+      return;
     }
 
-    replyBtn.addEventListener('click', sendReply);
-    replyInput.addEventListener('keydown', e => { if (e.key === 'Enter') sendReply(); });
-    replyInput.focus();
+    chatList.innerHTML = '';
+    filtered.forEach(chat => {
+      const item = document.createElement('div');
+      item.className = 'chat-item' + (chat.id === activeChatId ? ' active' : '');
+      const unread = chat.unreadByAdmin || 0;
+      item.innerHTML = `
+        <div class="ci-avatar">${initials(chat.customerName)}</div>
+        <div class="ci-body">
+          <div class="ci-name">
+            <span>${escapeHtml(chat.customerName || 'Unknown')}</span>
+            <span class="ci-time">${fmtTime(chat.lastMessageAt)}</span>
+          </div>
+          <div class="ci-last">${escapeHtml(chat.lastMessage || '')}</div>
+        </div>
+        ${unread > 0 ? `<div class="unread-badge">${unread}</div>` : ''}
+      `;
+      item.addEventListener('click', () => openChat(chat));
+      chatList.appendChild(item);
+    });
   }
+
+  searchInput.addEventListener('input', renderChatList);
+
+  function escapeHtml(str){
+    return String(str).replace(/[&<>"']/g, s => ({
+      '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+    }[s]));
+  }
+
+  // ---------- Active chat ----------
+  function openChat(chat){
+    activeChatId = chat.id;
+    noChatSelected.style.display = 'none';
+    activeChatView.style.display = 'flex';
+    cphAvatar.textContent = initials(chat.customerName);
+    cphName.textContent = chat.customerName || 'Unknown';
+    cphSub.textContent = 'Chat ID: ' + chat.id;
+    sidebar.classList.add('slide-out'); // mobile: hide list, show chat
+
+    renderChatList(); // to update active highlight
+
+    // Reset unread counter for admin
+    db.collection('supportChats').doc(chat.id).set({ unreadByAdmin: 0 }, { merge: true });
+
+    if (unsubscribeMessages) unsubscribeMessages();
+    unsubscribeMessages = db.collection('supportChats').doc(chat.id)
+      .collection('messages')
+      .orderBy('timestamp')
+      .onSnapshot(snap => {
+        messagesEl.innerHTML = '';
+        snap.forEach(doc => {
+          const m = doc.data();
+          const div = document.createElement('div');
+          div.className = 'msg ' + (m.sender === 'admin' ? 'admin' : 'customer');
+          div.innerHTML = escapeHtml(m.text) + '<span class="time">' + fmtTime(m.timestamp) + '</span>';
+          messagesEl.appendChild(div);
+        });
+        messagesEl.scrollTop = messagesEl.scrollHeight;
+      });
+  }
+
+  backToList.addEventListener('click', () => {
+    sidebar.classList.remove('slide-out');
+  });
+
+  function sendReply(){
+    const text = msgInput.value.trim();
+    if (!text || !activeChatId) return;
+    msgInput.value = '';
+
+    const chatRef = db.collection('supportChats').doc(activeChatId);
+    chatRef.collection('messages').add({
+      sender: 'admin',
+      text: text,
+      timestamp: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    chatRef.set({
+      lastMessage: text,
+      lastMessageAt: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+  }
+  sendBtn.addEventListener('click', sendReply);
+  msgInput.addEventListener('keydown', e => { if (e.key === 'Enter') sendReply(); });
+
+  resolveBtn.addEventListener('click', () => {
+    if (!activeChatId) return;
+    db.collection('supportChats').doc(activeChatId).set({
+      status: 'resolved',
+      unreadByAdmin: 0
+    }, { merge: true });
+    resolveBtn.textContent = 'Resolved ✓';
+    setTimeout(() => resolveBtn.textContent = 'Mark as resolved', 1500);
+  });
 </script>
 </body>
 </html>
