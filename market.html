@@ -205,6 +205,7 @@ async function loadMarket() {
         .then(r => r.json())
         .then(klines => {
           const prices = klines.map(k => parseFloat(k[4]));
+          prices.push(price); // add the live price so the chart moves with every refresh
           const canvas = document.getElementById('chart-' + coin.symbol);
           if (canvas) drawSparkline(canvas, prices, up);
         })
