@@ -100,7 +100,7 @@
       <button class="refresh-btn" onclick="loadUsers()">Refresh</button>
     </div>
     <table>
-      <thead><tr><th>Email</th><th>UID</th><th>Balance (USDT)</th><th>New Balance</th><th></th><th>Win Rate %</th><th></th></tr></thead>
+      <thead><tr><th>Email</th><th>Account ID</th><th>Balance (USDT)</th><th>New Balance</th><th></th><th>Win Rate %</th><th></th></tr></thead>
       <tbody id="users-tbody"></tbody>
     </table>
   </div>
@@ -218,6 +218,7 @@ async function loadUsers() {
       const d = doc.data();
       allUsers.push({
         uid: doc.id,
+        accountId: d.accountId || doc.id,
         identifier: d.identifier || '',
         email: d.email || '',
         balance: d.balance || 0,
@@ -249,7 +250,7 @@ function renderUsers(list) {
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td>${u.identifier || u.email || '-'}</td>
-      <td style="font-size:10px;color:#5b6169;word-break:break-all;">${u.uid}</td>
+      <td style="font-size:10px;color:#5b6169;word-break:break-all;">${u.accountId}</td>
       <td>${balance}</td>
       <td><input type="number" class="mini-input" placeholder="${balance}" id="bal-${u.uid}"></td>
       <td><button class="btn btn-save" onclick="saveUserBalance('${u.uid}')">Save</button></td>
@@ -270,6 +271,7 @@ function filterUsers() {
   }
   const filtered = allUsers.filter(u =>
     u.uid.toLowerCase().includes(q) ||
+    u.accountId.toLowerCase().includes(q) ||
     (u.email && u.email.toLowerCase().includes(q)) ||
     (u.identifier && u.identifier.toLowerCase().includes(q))
   );
