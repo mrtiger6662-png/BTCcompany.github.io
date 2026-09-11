@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Live Support</title>
+<style>
+  :root{
+    --bg:#0B0D12;
+    --panel:#12151D;
+    --panel-2:#181C27;
+    --border:#242938;
+    --gold:#F0B90B;
+    --text:#F5F6FA;
+    --text-dim:#8B93A7;
+    --bubble-user:#F0B90B;
+    --bubble-user-text:#12151D;
+    --bubble-admin:#1E2330;
+  }
+  *{box-sizing:border-box;}
+  html,body{
+    margin:0;height:100%;
+    background:var(--bg);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans Bengali",sans-serif;
+    color:var(--text);
+  }
+  .chat-shell{
+    max-width:480px;
+    margin:0 auto;
+    height:100vh;
+    display:flex;
+    flex-direction:column;
+    background:var(--panel);
+  }
+  .chat-header{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    padding:16px 18px;
+    border-bottom:1px solid var(--border);
+    background:var(--panel-2);
+  }
+  .chat-header .avatar{
+    width:38px;height:38px;border-radius:50%;
+    background:var(--gold);
+    display:flex;align-items:center;justify-content:center;
+    font-size:18px;
+  }
+  .chat-header .title{font-weight:600;font-size:15px;}
+  .chat-header .status{font-size:12px;color:#16C784;display:flex;align-items:center;gap:5px;}
+  .chat-header .status::before{content:"";width:6px;height:6px;border-radius:50%;background:#16C784;}
+  .chat-header .back{
+    margin-left:auto;background:none;border:none;color:var(--text-dim);
+    font-size:22px;cursor:pointer;line-height:1;
+  }
+  .messages{
+    flex:1;
+    overflow-y:auto;
+    padding:18px;
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+  }
+  .msg{
+    max-width:78%;
+    padding:10px 14px;
+    border-radius:14px;
+    font-size:14px;
+    line-height:1.45;
+    word-wrap:break-word;
+  }
+  .msg.system{
+    align-self:center;
+    background:transparent;
+    color:var(--text-dim);
+    font-size:12px;
+    text-align:center;
+    max-width:90%;
+  }
+  .msg.customer{
+    align-self:flex-end;
+    background:var(--bubble-user);
+    color:var(--bubble-user-text);
+    border-bottom-right-radius:4px;
+  }
+  .msg.admin{
+    align-self:flex-start;
+    background:var(--bubble-admin);
+    color:var(--text);
+    border-bottom-left-radius:4px;
+  }
+  .msg .time{
+    display:block;
+    font-size:10px;
+    opacity:.6;
+    margin-top:4px;
+  }
+  .composer{
+    display:flex;
+    gap:8px;
+    padding:12px;
+    border-top:1px solid var(--border);
+    background:var(--panel-2);
+  }
+  .composer input{
+    flex:1;
+    background:var(--bg);
+    border:1px solid var(--border);
+    border-radius:22px;
+    padding:11px 16px;
+    color:var(--text);
+    font-size:14px;
+    outline:none;
+  }
+  .composer input:focus{border-color:var(--gold);}
+  .composer button{
+    background:var(--gold);
+    color:#12151D;
+    border:none;
+    border-radius:50%;
+    width:42px;height:42px;
+    font-size:16px;
+    cursor:pointer;
+    flex-shrink:0;
+  }
+  .composer button:disabled{opacity:.5;cursor:default;}
+  .name-gate{
+    flex:1;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:14px;
+    padding:24px;
+    text-align:center;
+  }
+  .name-gate h2{margin:0;font-size:18px;}
+  .name-gate p{margin:0;color:var(--text-dim);font-size:13px;}
+  .name-gate input{
+    width:100%;max-width:280px;
+    background:var(--bg);
+    border:1px solid var(--border);
+    border-radius:10px;
+    padding:12px 14px;
+    color:var(--text);
+    font-size:14px;
+    outline:none;
+  }
+  .name-gate input:focus{border-color:var(--gold);}
+  .name-gate button{
+    width:100%;max-width:280px;
+    background:var(--gold);
+    color:#12151D;
+    border:none;
+    border-radius:10px;
+    padding:12px;
+    font-weight:600;
+    font-size:14px;
+    cursor:pointer;
+  }
+</style>
+</head>
+<body>
+
+<div class="chat-shell">
+  <div class="chat-header">
+    <div class="avatar">🎧</div>
+    <div>
+      <div class="title">Live Support</div>
+      <div class="status" id="statusLabel">Connecting…</div>
+    </div>
+    <button class="back" onclick="history.back()">×</button>
+  </div>
+
+  <div id="nameGate" class="name-gate">
+    <h2>আমাদের সাপোর্ট টিমকে লিখুন</h2>
+    <p>শুরু করার আগে আপনার নাম দিন, আমাদের এজেন্ট শীঘ্রই রিপ্লাই দেবে।</p>
+    <input id="nameInput" type="text" placeholder="আপনার নাম" maxlength="40">
+    <button id="startBtn">চ্যাট শুরু করুন</button>
+  </div>
+
+  <div class="messages" id="messages" style="display:none;"></div>
+
+  <div class="composer" id="composer" style="display:none;">
+    <input id="msgInput" type="text" placeholder="মেসেজ লিখুন…" maxlength="1000">
+    <button id="sendBtn">➤</button>
+  </div>
+</div>
+
+<!-- Firebase SDK (compat, no build step needed) -->
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+<script>
+  // ====== ১. এখানে আপনার নিজের Firebase কনফিগ বসান ======
+  const firebaseConfig = {
+    apiKey: "YOUR_API_KEY",
+    authDomain: "YOUR_PROJECT.firebaseapp.com",
+    projectId: "YOUR_PROJECT_ID",
+    storageBucket: "YOUR_PROJECT.appspot.com",
+    messagingSenderId: "YOUR_SENDER_ID",
+    appId: "YOUR_APP_ID"
+  };
+  // =======================================================
+
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
+
+  const nameGate   = document.getElementById('nameGate');
+  const nameInput  = document.getElementById('nameInput');
+  const startBtn   = document.getElementById('startBtn');
+  const messagesEl = document.getElementById('messages');
+  const composer   = document.getElementById('composer');
+  const msgInput   = document.getElementById('msgInput');
+  const sendBtn    = document.getElementById('sendBtn');
+  const statusLabel= document.getElementById('statusLabel');
+
+  // প্রতিটি গ্রাহকের জন্য একটি স্থায়ী chatId (browser এ সংরক্ষিত)
+  let chatId = localStorage.getItem('support_chat_id');
+  if (!chatId) {
+    chatId = 'chat_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+    localStorage.setItem('support_chat_id', chatId);
+  }
+
+  const chatRef = db.collection('supportChats').doc(chatId);
+  const msgsRef = chatRef.collection('messages');
+
+  function fmtTime(ts) {
+    if (!ts) return '';
+    const d = ts.toDate ? ts.toDate() : new Date();
+    return d.toLocaleTimeString('bn-BD', { hour: '2-digit', minute: '2-digit' });
+  }
+
+  function renderMessage(sender, text, ts) {
+    const div = document.createElement('div');
+    div.className = 'msg ' + sender;
+    div.innerHTML = text.replace(/</g,'&lt;') + '<span class="time">' + fmtTime(ts) + '</span>';
+    messagesEl.appendChild(div);
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+  }
+
+  function startChat(name) {
+    nameGate.style.display = 'none';
+    messagesEl.style.display = 'flex';
+    composer.style.display = 'flex';
+    statusLabel.textContent = 'Online';
+
+    chatRef.set({
+      customerName: name,
+      lastMessage: 'চ্যাট শুরু হয়েছে',
+      lastMessageAt: firebase.firestore.FieldValue.serverTimestamp(),
+      unreadByAdmin: 0,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+
+    msgsRef.orderBy('timestamp').onSnapshot(snap => {
+      messagesEl.innerHTML = '';
+      snap.forEach(doc => {
+        const m = doc.data();
+        renderMessage(m.sender, m.text, m.timestamp);
+      });
+    });
+  }
+
+  startBtn.addEventListener('click', () => {
+    const name = nameInput.value.trim();
+    if (!name) { nameInput.focus(); return; }
+    startChat(name);
+  });
+  nameInput.addEventListener('keydown', e => { if (e.key === 'Enter') startBtn.click(); });
+
+  function sendMessage() {
+    const text = msgInput.value.trim();
+    if (!text) return;
+    msgInput.value = '';
+    msgsRef.add({
+      sender: 'customer',
+      text: text,
+      timestamp: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    chatRef.set({
+      lastMessage: text,
+      lastMessageAt: firebase.firestore.FieldValue.serverTimestamp(),
+      unreadByAdmin: firebase.firestore.FieldValue.increment(1)
+    }, { merge: true });
+  }
+
+  sendBtn.addEventListener('click', sendMessage);
+  msgInput.addEventListener('keydown', e => { if (e.key === 'Enter') sendMessage(); });
+
+  // যদি আগেই চ্যাট চলমান থাকে (পেজ রিলোড), সরাসরি চ্যাট উইন্ডো দেখাও
+  chatRef.get().then(doc => {
+    if (doc.exists && doc.data().customerName) {
+      startChat(doc.data().customerName);
+    }
+  });
+</script>
+</body>
+</html>
