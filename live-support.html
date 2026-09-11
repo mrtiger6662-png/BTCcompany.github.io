@@ -298,12 +298,29 @@
     });
   });
 
+  // ====== ১২ ঘণ্টা সেশন মেয়াদ (নতুন) ======
+  const SESSION_LIMIT_MS = 12 * 60 * 60 * 1000; // 12 hours
+
+  function touchActivity(){
+    localStorage.setItem('support_last_activity', Date.now().toString());
+  }
+
   // প্রতিটি গ্রাহকের জন্য একটি স্থায়ী chatId (browser এ সংরক্ষিত)
   let chatId = localStorage.getItem('support_chat_id');
+  const lastActivity = parseInt(localStorage.getItem('support_last_activity') || '0', 10);
+
+  if (chatId && (Date.now() - lastActivity > SESSION_LIMIT_MS)) {
+    // ১২ ঘণ্টার বেশি নিষ্ক্রিয় থাকলে পুরনো সেশন বাতিল করে নতুন শুরু
+    localStorage.removeItem('support_chat_id');
+    localStorage.removeItem('support_last_activity');
+    chatId = null;
+  }
+
   if (!chatId) {
     chatId = 'chat_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
     localStorage.setItem('support_chat_id', chatId);
   }
+  touchActivity();
 
   const chatRef = db.collection('supportChats').doc(chatId);
   const msgsRef = chatRef.collection('messages');
@@ -335,6 +352,7 @@
   }
 
   function startChat(name) {
+    touchActivity();
     nameGate.style.display = 'none';
     messagesEl.style.display = 'flex';
     composer.style.display = 'flex';
@@ -383,6 +401,7 @@
     const text = msgInput.value.trim();
     if (!text) return;
     msgInput.value = '';
+    touchActivity();
 
     clearTimeout(typingTimeout);
 
