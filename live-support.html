@@ -85,6 +85,37 @@
     flex-direction:column;
     gap:10px;
   }
+
+  /* ---- Message row: holds the avatar + bubble side by side ---- */
+  .msg-row{
+    display:flex;
+    align-items:flex-end;
+    gap:8px;
+    max-width:100%;
+  }
+  .msg-row.customer{ justify-content:flex-end; align-self:flex-end; }
+  .msg-row.admin{ justify-content:flex-start; align-self:flex-start; }
+
+  .msg-avatar{
+    width:28px;height:28px;border-radius:50%;
+    flex-shrink:0;
+    display:flex;align-items:center;justify-content:center;
+    font-size:14px;font-weight:600;
+    overflow:hidden;
+  }
+  .msg-avatar.admin{
+    background:var(--gold);
+    color:#12151D;
+    font-size:15px;
+  }
+  .msg-avatar.customer{
+    background:#3A4155;
+    color:#fff;
+  }
+  .msg-avatar img{
+    width:100%;height:100%;object-fit:cover;
+  }
+
   .msg{
     max-width:78%;
     padding:10px 14px;
@@ -102,22 +133,25 @@
     max-width:90%;
   }
   .msg.customer{
-    align-self:flex-end;
     background:var(--bubble-user);
     color:var(--bubble-user-text);
     border-bottom-right-radius:4px;
   }
   .msg.admin{
-    align-self:flex-start;
     background:var(--bubble-admin);
     color:var(--text);
     border-bottom-left-radius:4px;
   }
   .msg .time{
-    display:block;
+    display:flex;
+    align-items:center;
+    gap:4px;
     font-size:10px;
     opacity:.6;
     margin-top:4px;
+  }
+  .msg .tick{
+    font-size:11px;
   }
   .composer{
     display:flex;
@@ -322,6 +356,8 @@
   const topicsPanel  = document.getElementById('topicsPanel');
   const topicsToggle = document.getElementById('topicsToggle');
 
+  let currentCustomerName = '';
+
   topicsToggle.addEventListener('click', () => {
     topicsPanel.style.display = (topicsPanel.style.display === 'none') ? 'block' : 'none';
   });
@@ -384,15 +420,58 @@
     return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
   }
 
-  function renderMessage(sender, text, ts) {
+  // Builds the small circular avatar shown next to each bubble.
+  // Admin -> headset icon. Customer -> first letter of their name.
+  function buildAvatar(sender) {
     const div = document.createElement('div');
-    div.className = 'msg ' + sender;
-    div.innerHTML = text.replace(/</g,'&lt;') + '<span class="time">' + fmtTime(ts) + '</span>';
-    messagesEl.appendChild(div);
+    div.className = 'msg-avatar ' + sender;
+    if (sender === 'admin') {
+      div.textContent = '🎧';
+    } else {
+      const initial = (currentCustomerName || '?').trim().charAt(0).toUpperCase() || '?';
+      div.textContent = initial;
+    }
+    return div;
+  }
+
+  function renderMessage(sender, text, ts) {
+    if (sender === 'system') {
+      const sysDiv = document.createElement('div');
+      sysDiv.className = 'msg system';
+      sysDiv.textContent = text;
+      messagesEl.appendChild(sysDiv);
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+      return;
+    }
+
+    const row = document.createElement('div');
+    row.className = 'msg-row ' + sender;
+
+    const bubble = document.createElement('div');
+    bubble.className = 'msg ' + sender;
+    const timeHtml = sender === 'customer'
+      ? '<span class="time">' + fmtTime(ts) + ' <span class="tick">✓</span></span>'
+      : '<span class="time">' + fmtTime(ts) + '</span>';
+    bubble.innerHTML = text.replace(/</g,'&lt;') + timeHtml;
+
+    const avatar = buildAvatar(sender);
+
+    if (sender === 'customer') {
+      // Bubble first, avatar after it, so the avatar sits on the far right.
+      row.appendChild(bubble);
+      row.appendChild(avatar);
+    } else {
+      // Avatar first, bubble after it, so the avatar sits on the far left.
+      row.appendChild(avatar);
+      row.appendChild(bubble);
+    }
+
+    messagesEl.appendChild(row);
     messagesEl.scrollTop = messagesEl.scrollHeight;
   }
 
   function startChat(name) {
+    currentCustomerName = name;
     touchActivity();
     nameGate.style.display = 'none';
     messagesEl.style.display = 'flex';
