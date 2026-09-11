@@ -175,15 +175,14 @@ async function loadMarket() {
   const tbody = document.getElementById('market-body');
   const highlightRow = document.getElementById('highlight-row');
   try {
-    const tickerRes = await fetch('https://api.binance.com/api/v3/ticker/24hr');
-    const allTickers = await tickerRes.json();
-    const wantedSymbols = new Set(coinList.map(c => c.symbol));
-    const tickers = allTickers.filter(t => wantedSymbols.has(t.symbol));
+    const symbolsParam = encodeURIComponent(JSON.stringify(popularCoins.map(c => c.symbol)));
+    const tickerRes = await fetch('https://api.binance.com/api/v3/ticker/24hr?symbols=' + symbolsParam);
+    const tickers = await tickerRes.json();
 
     tbody.innerHTML = '';
     highlightRow.innerHTML = '';
 
-    for (const coin of coinList) {
+    for (const coin of popularCoins) {
       const ticker = tickers.find(t => t.symbol === coin.symbol);
       if (!ticker) continue;
       const changePercent = parseFloat(ticker.priceChangePercent);
@@ -441,7 +440,7 @@ setInterval(() => {
   if (currentTab === 'crypto' || currentTab === 'futures') {
     loadMarket();
   }
-}, 2000); // Crypto/Futures refresh every 2 seconds
+}, 3000); // Crypto/Futures refresh every 3 seconds
 
 setInterval(() => {
   if (currentTab === 'forex') {
