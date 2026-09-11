@@ -62,7 +62,19 @@
   .duration-time { font-size:17px; font-weight:bold; color:#f0b90b; }
   .duration-return { font-size:10px; color:#848e9c; margin-top:4px; line-height:1.3; }
 
-  .invest-section { margin-top:18px; display:none; }
+  .invest-section {
+    margin-top:18px;
+    max-height:0;
+    opacity:0;
+    transform:translateY(24px);
+    overflow:hidden;
+    transition:max-height 0.45s ease, opacity 0.35s ease, transform 0.4s ease, margin-top 0.45s ease;
+  }
+  .invest-section.show {
+    max-height:600px;
+    opacity:1;
+    transform:translateY(0);
+  }
   .amount-box { display:flex; align-items:center; gap:8px; }
   .amount-box input {
   flex:1; min-width:0; width:100%;
@@ -419,7 +431,7 @@ function showInvestSection(d) {
   const input = document.getElementById('amount-input');
   const errorEl = document.getElementById('amount-error');
 
-  section.style.display = 'block';
+  section.classList.add('show');
   errorEl.textContent = '';
   input.value = '';
   input.placeholder = 'Investment amount';
@@ -569,7 +581,7 @@ function openChart(coin) {
   document.getElementById('chart-pair').textContent = coin.short + '/USDT';
 
   renderDurationBoxes();
-  document.getElementById('invest-section').style.display = 'none';
+  document.getElementById('invest-section').classList.remove('show');
   selectedDuration = null;
 
   loadChart();
@@ -721,7 +733,7 @@ function closeTradeModal() {
 // "Order again" resets back to the duration-selection screen (before invest section)
 tmAgainBtn.addEventListener('click', () => {
   closeTradeModal();
-  document.getElementById('invest-section').style.display = 'none';
+  document.getElementById('invest-section').classList.remove('show');
   selectedDuration = null;
   document.querySelectorAll('.duration-box').forEach(b => b.classList.remove('selected'));
 });
