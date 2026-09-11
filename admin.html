@@ -21,12 +21,18 @@
   .panel { display:none; padding:16px; }
   .panel.active { display:block; }
 
-  .toolbar { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
+  .toolbar { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; gap:10px; flex-wrap:wrap; }
   .refresh-btn {
     background:#1e2329; border:1px solid #2b3139; color:#eaecef; padding:8px 14px;
     border-radius:6px; cursor:pointer; font-size:12px;
   }
   .count-label { color:#848e9c; font-size:12px; }
+  .search-box {
+    flex:1; min-width:180px; max-width:320px;
+    background:#1e2329; border:1px solid #2b3139; color:#eaecef;
+    padding:8px 12px; border-radius:6px; font-size:12.5px;
+  }
+  .search-box::placeholder { color:#5b6169; }
 
   table { width:100%; border-collapse:collapse; font-size:12.5px; }
   th, td { padding:10px 8px; text-align:left; border-bottom:1px solid #1e2329; vertical-align:middle; }
@@ -89,6 +95,7 @@
   <!-- USERS -->
   <div class="panel active" id="panel-users">
     <div class="toolbar">
+      <input type="text" class="search-box" id="user-search" placeholder="Search by Account ID (UID), email or number...">
       <span class="count-label" id="users-count"></span>
       <button class="refresh-btn" onclick="loadUsers()">Refresh</button>
     </div>
@@ -199,34 +206,77 @@ function fmtDate(ts) {
 }
 
 // ================= USERS =================
+let allUsers = []; // cached list of every loaded user, used for client-side search
+
 async function loadUsers() {
   const tbody = document.getElementById('users-tbody');
   tbody.innerHTML = '<tr><td colspan="7" class="empty-msg">Loading...</td></tr>';
   try {
     const snap = await db.collection('users').get();
-    document.getElementById('users-count').textContent = snap.size + ' users';
-    if (snap.empty) { tbody.innerHTML = '<tr><td colspan="7" class="empty-msg">No users found.</td></tr>'; return; }
-    tbody.innerHTML = '';
+    allUsers = [];
     snap.forEach(doc => {
       const d = doc.data();
-      const balance = (d.balance || 0).toFixed(2);
-      const winRate = (typeof d.winRatePercent === 'number') ? d.winRatePercent : '';
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td>${d.identifier || d.email || '-'}</td>
-        <td style="font-size:10px;color:#5b6169;word-break:break-all;">${doc.id}</td>
-        <td>${balance}</td>
-        <td><input type="number" class="mini-input" placeholder="${balance}" id="bal-${doc.id}"></td>
-        <td><button class="btn btn-save" onclick="saveUserBalance('${doc.id}')">Save</button></td>
-        <td><input type="number" min="1" max="100" class="mini-input" style="width:65px;" placeholder="off" value="${winRate}" id="winrate-${doc.id}"></td>
-        <td><button class="btn btn-save" onclick="saveWinRate('${doc.id}')">Save</button></td>
-      `;
-      tbody.appendChild(tr);
+      allUsers.push({
+        uid: doc.id,
+        identifier: d.identifier || '',
+        email: d.email || '',
+        balance: d.balance || 0,
+        winRatePercent: (typeof d.winRatePercent === 'number') ? d.winRatePercent : ''
+      });
     });
+    renderUsers(allUsers);
+    // Re-apply whatever search text is already in the box (e.g. after Refresh)
+    const searchVal = document.getElementById('user-search').value;
+    if (searchVal.trim()) filterUsers();
   } catch (e) {
     tbody.innerHTML = `<tr><td colspan="7" class="empty-msg">Failed to load: ${e.message}</td></tr>`;
   }
 }
+
+function renderUsers(list) {
+  const tbody = document.getElementById('users-tbody');
+  document.getElementById('users-count').textContent =
+    list.length === allUsers.length ? (allUsers.length + ' users') : (list.length + ' of ' + allUsers.length + ' users');
+
+  if (list.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="7" class="empty-msg">No matching users found.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = '';
+  list.forEach(u => {
+    const balance = u.balance.toFixed(2);
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${u.identifier || u.email || '-'}</td>
+      <td style="font-size:10px;color:#5b6169;word-break:break-all;">${u.uid}</td>
+      <td>${balance}</td>
+      <td><input type="number" class="mini-input" placeholder="${balance}" id="bal-${u.uid}"></td>
+      <td><button class="btn btn-save" onclick="saveUserBalance('${u.uid}')">Save</button></td>
+      <td><input type="number" min="1" max="100" class="mini-input" style="width:65px;" placeholder="off" value="${u.winRatePercent}" id="winrate-${u.uid}"></td>
+      <td><button class="btn btn-save" onclick="saveWinRate('${u.uid}')">Save</button></td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+// Matches the search box text against Account ID (UID), email, and identifier
+// (identifier is whatever the user signed up with — email or phone number).
+function filterUsers() {
+  const q = document.getElementById('user-search').value.trim().toLowerCase();
+  if (!q) {
+    renderUsers(allUsers);
+    return;
+  }
+  const filtered = allUsers.filter(u =>
+    u.uid.toLowerCase().includes(q) ||
+    (u.email && u.email.toLowerCase().includes(q)) ||
+    (u.identifier && u.identifier.toLowerCase().includes(q))
+  );
+  renderUsers(filtered);
+}
+
+document.getElementById('user-search').addEventListener('input', filterUsers);
 
 async function saveUserBalance(uid) {
   const input = document.getElementById('bal-' + uid);
