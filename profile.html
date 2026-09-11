@@ -131,6 +131,7 @@ firebase.auth().onAuthStateChanged(async user => {
   // -------------------------------------
 
   const card = document.getElementById('profile-card');
+  let fullName = '-';
   let identifier = user.email;
   let accountId = '-';
   let createdAtStr = '-';
@@ -138,12 +139,14 @@ firebase.auth().onAuthStateChanged(async user => {
     const doc = await firebase.firestore().collection('users').doc(user.uid).get();
     if (doc.exists) {
       const data = doc.data();
+      if (data.fullName) fullName = data.fullName;
       identifier = data.identifier || user.email;
       if (data.accountId) accountId = data.accountId;
       if (data.createdAt) createdAtStr = data.createdAt.toDate().toLocaleString();
     }
   } catch (e) {}
   card.innerHTML = `
+    <div class="row"><span class="label">Full Name</span><span class="value">${fullName}</span></div>
     <div class="row"><span class="label">Email/Phone</span><span class="value">${identifier}</span></div>
     <div class="row"><span class="label">Account ID</span><span class="value">${accountId}</span></div>
     <div class="row"><span class="label">Joined</span><span class="value">${createdAtStr}</span></div>
