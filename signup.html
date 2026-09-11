@@ -12,6 +12,40 @@
   .box button { width:100%; padding:12px; margin-top:10px; border:none; border-radius:6px; background:#f0b90b; color:#202630; font-weight:bold; cursor:pointer; }
   .msg { text-align:center; margin-top:10px; font-size:14px; }
   a { color:#f0b90b; }
+
+  .verify-overlay {
+    display:none;
+    position:fixed; inset:0; background:#0b0e11;
+    align-items:center; justify-content:center;
+    flex-direction:column; z-index:9999;
+  }
+  .verify-overlay.active { display:flex; }
+  .verify-icon-wrap {
+    width:90px; height:90px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    margin-bottom:20px;
+  }
+  .verify-spinner {
+    width:90px; height:90px; border-radius:50%;
+    border:4px solid #2b3139;
+    border-top:4px solid #f0b90b;
+    animation: spin 0.9s linear infinite;
+  }
+  .verify-check {
+    width:90px; height:90px; border-radius:50%;
+    border:4px solid #0ecb81;
+    display:flex; align-items:center; justify-content:center;
+    font-size:40px; color:#0ecb81;
+  }
+  @keyframes spin {
+    100% { transform:rotate(360deg); }
+  }
+  .verify-title {
+    font-size:20px; font-weight:bold; color:#eaecef; margin-bottom:6px;
+  }
+  .verify-subtitle {
+    font-size:13px; color:#848e9c;
+  }
 </style>
 </head>
 <body>
@@ -23,6 +57,14 @@
   <button onclick="signUp()">Sign Up</button>
   <p class="msg" id="msg"></p>
   <p class="msg">Already have an account? <a href="login.html">Log In</a></p>
+</div>
+
+<div class="verify-overlay" id="verify-overlay">
+  <div class="verify-icon-wrap" id="verify-icon-wrap">
+    <div class="verify-spinner"></div>
+  </div>
+  <div class="verify-title" id="verify-title">Email Verification</div>
+  <div class="verify-subtitle" id="verify-subtitle"></div>
 </div>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -84,9 +126,22 @@ function signUp() {
       });
     })
     .then(() => {
-      msg.style.color = '#0ecb81';
-      msg.textContent = 'Account created! Redirecting...';
-      setTimeout(() => window.location.href = 'market.html', 1500);
+      const overlay = document.getElementById('verify-overlay');
+      const iconWrap = document.getElementById('verify-icon-wrap');
+      const title = document.getElementById('verify-title');
+      const subtitle = document.getElementById('verify-subtitle');
+
+      overlay.classList.add('active');
+
+      setTimeout(() => {
+        iconWrap.innerHTML = '<div class="verify-check">&#10003;</div>';
+        title.textContent = 'Email Verified';
+        subtitle.textContent = 'Your email address was successfully verified.';
+
+        setTimeout(() => {
+          window.location.href = 'market.html';
+        }, 1000);
+      }, 1500);
     })
     .catch(err => {
       msg.style.color = 'red';
