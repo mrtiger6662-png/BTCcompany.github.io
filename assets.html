@@ -158,6 +158,34 @@ const firebaseConfig = {
   appId: "1:1026212780106:web:985ec1bc35837d6320eeb3"
 };
 firebase.initializeApp(firebaseConfig);
+
+// ---- Show cached data instantly (no "Loading..." flash on repeat visits) ----
+// The real Firebase data below overwrites this the moment it arrives.
+(function showCachedAssets() {
+  try {
+    const cached = JSON.parse(localStorage.getItem('assetsCache') || 'null');
+    if (!cached) return;
+    document.getElementById('balanceNum').textContent = cached.balance.toFixed(2);
+    document.getElementById('balanceUsd').textContent = `≈ $${cached.balance.toFixed(2)}`;
+    if (cached.tradesHtml !== undefined) {
+      document.getElementById('trades-list').innerHTML = cached.tradesHtml;
+      document.getElementById('totalProfit').textContent = cached.totalProfitText;
+      document.getElementById('totalLoss').textContent = cached.totalLossText;
+    }
+    if (cached.assetsHtml !== undefined) {
+      document.getElementById('assets-card').innerHTML = cached.assetsHtml;
+    }
+  } catch (e) {}
+})();
+
+function saveAssetsCache(patch) {
+  try {
+    const cached = JSON.parse(localStorage.getItem('assetsCache') || '{}');
+    Object.assign(cached, patch);
+    localStorage.setItem('assetsCache', JSON.stringify(cached));
+  } catch (e) {}
+}
+
 firebase.auth().onAuthStateChanged(async user => {
   if (!user) {
     window.location.href = 'login.html';
@@ -172,6 +200,7 @@ firebase.auth().onAuthStateChanged(async user => {
         const balance = data.balance || 0;
         document.getElementById('balanceNum').textContent = balance.toFixed(2);
         document.getElementById('balanceUsd').textContent = `≈ $${balance.toFixed(2)}`;
+        saveAssetsCache({ balance });
       }
     });
   // -------------------------------------
@@ -249,6 +278,12 @@ firebase.auth().onAuthStateChanged(async user => {
     const totalLoss = completed.filter(t => t.profit < 0).reduce((s, t) => s + t.profit, 0);
     totalProfitEl.textContent = `+${totalProfit.toFixed(2)} USDT`;
     totalLossEl.textContent = `${totalLoss.toFixed(2)} USDT`; // already negative
+
+    saveAssetsCache({
+      tradesHtml: tradesList.innerHTML,
+      totalProfitText: totalProfitEl.textContent,
+      totalLossText: totalLossEl.textContent
+    });
   }
 
   try {
@@ -301,6 +336,7 @@ firebase.auth().onAuthStateChanged(async user => {
     deposits.forEach(dep => { rows += renderRow('Deposit', dep); });
     withdrawals.forEach(wd => { rows += renderRow('Withdrawal', wd); });
     card.innerHTML = rows;
+    saveAssetsCache({ assetsHtml: card.innerHTML });
   }
 
   try {
