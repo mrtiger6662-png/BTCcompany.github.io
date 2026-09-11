@@ -112,6 +112,24 @@ const firebaseConfig = {
   appId: "1:1026212780106:web:985ec1bc35837d6320eeb3"
 };
 firebase.initializeApp(firebaseConfig);
+
+// ---- Show cached data instantly (no "Loading..." flash on repeat visits) ----
+// The real Firebase data below will overwrite this the moment it arrives.
+(function showCachedProfile() {
+  try {
+    const cached = JSON.parse(localStorage.getItem('profileCache') || 'null');
+    if (!cached) return;
+    document.getElementById('balanceNum').textContent = cached.balance.toFixed(2);
+    document.getElementById('balanceUsd').textContent = `≈ $${cached.balance.toFixed(2)}`;
+    document.getElementById('profile-card').innerHTML = `
+      <div class="row"><span class="label">Full Name</span><span class="value">${cached.fullName}</span></div>
+      <div class="row"><span class="label">Email/Phone</span><span class="value">${cached.identifier}</span></div>
+      <div class="row"><span class="label">Account ID</span><span class="value">${cached.accountId}</span></div>
+      <div class="row"><span class="label">Joined</span><span class="value">${cached.createdAtStr}</span></div>
+    `;
+  } catch (e) {}
+})();
+
 firebase.auth().onAuthStateChanged(async user => {
   if (!user) {
     window.location.href = 'login.html';
@@ -126,6 +144,13 @@ firebase.auth().onAuthStateChanged(async user => {
         const balance = data.balance || 0;
         document.getElementById('balanceNum').textContent = balance.toFixed(2);
         document.getElementById('balanceUsd').textContent = `≈ $${balance.toFixed(2)}`;
+
+        // Keep the cached balance in sync so the next page load starts from the latest number.
+        try {
+          const cached = JSON.parse(localStorage.getItem('profileCache') || '{}');
+          cached.balance = balance;
+          localStorage.setItem('profileCache', JSON.stringify(cached));
+        } catch (e) {}
       }
     });
   // -------------------------------------
@@ -135,6 +160,7 @@ firebase.auth().onAuthStateChanged(async user => {
   let identifier = user.email;
   let accountId = '-';
   let createdAtStr = '-';
+  let balanceForCache = 0;
   try {
     const doc = await firebase.firestore().collection('users').doc(user.uid).get();
     if (doc.exists) {
@@ -143,6 +169,7 @@ firebase.auth().onAuthStateChanged(async user => {
       identifier = data.identifier || user.email;
       if (data.accountId) accountId = data.accountId;
       if (data.createdAt) createdAtStr = data.createdAt.toDate().toLocaleString();
+      balanceForCache = data.balance || 0;
     }
   } catch (e) {}
   card.innerHTML = `
@@ -151,6 +178,13 @@ firebase.auth().onAuthStateChanged(async user => {
     <div class="row"><span class="label">Account ID</span><span class="value">${accountId}</span></div>
     <div class="row"><span class="label">Joined</span><span class="value">${createdAtStr}</span></div>
   `;
+
+  // Save this fresh data so the next visit to this page can show it instantly.
+  try {
+    localStorage.setItem('profileCache', JSON.stringify({
+      fullName, identifier, accountId, createdAtStr, balance: balanceForCache
+    }));
+  } catch (e) {}
 });
 </script>
 </body>
