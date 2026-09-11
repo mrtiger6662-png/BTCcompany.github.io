@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="bn">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -173,16 +173,16 @@
   </div>
 
   <div id="nameGate" class="name-gate">
-    <h2>আমাদের সাপোর্ট টিমকে লিখুন</h2>
-    <p>শুরু করার আগে আপনার নাম দিন, আমাদের এজেন্ট শীঘ্রই রিপ্লাই দেবে।</p>
-    <input id="nameInput" type="text" placeholder="আপনার নাম" maxlength="40">
-    <button id="startBtn">চ্যাট শুরু করুন</button>
+    <h2>Chat with our support team</h2>
+    <p>Enter your name to get started. Our agent will reply shortly.</p>
+    <input id="nameInput" type="text" placeholder="Your name" maxlength="40">
+    <button id="startBtn">Start chat</button>
   </div>
 
   <div class="messages" id="messages" style="display:none;"></div>
 
   <div class="composer" id="composer" style="display:none;">
-    <input id="msgInput" type="text" placeholder="মেসেজ লিখুন…" maxlength="1000">
+    <input id="msgInput" type="text" placeholder="Type a message…" maxlength="1000">
     <button id="sendBtn">➤</button>
   </div>
 </div>
@@ -227,7 +227,7 @@
   function fmtTime(ts) {
     if (!ts) return '';
     const d = ts.toDate ? ts.toDate() : new Date();
-    return d.toLocaleTimeString('bn-BD', { hour: '2-digit', minute: '2-digit' });
+    return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
   }
 
   function renderMessage(sender, text, ts) {
@@ -246,7 +246,7 @@
 
     chatRef.set({
       customerName: name,
-      lastMessage: 'চ্যাট শুরু হয়েছে',
+      lastMessage: 'Chat started',
       lastMessageAt: firebase.firestore.FieldValue.serverTimestamp(),
       unreadByAdmin: 0,
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
