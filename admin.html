@@ -93,7 +93,7 @@
       <button class="refresh-btn" onclick="loadUsers()">Refresh</button>
     </div>
     <table>
-      <thead><tr><th>Email</th><th>UID</th><th>Balance (USDT)</th><th>New Balance</th><th></th></tr></thead>
+      <thead><tr><th>Email</th><th>UID</th><th>Balance (USDT)</th><th>New Balance</th><th></th><th>Win Rate %</th><th></th></tr></thead>
       <tbody id="users-tbody"></tbody>
     </table>
   </div>
@@ -201,15 +201,16 @@ function fmtDate(ts) {
 // ================= USERS =================
 async function loadUsers() {
   const tbody = document.getElementById('users-tbody');
-  tbody.innerHTML = '<tr><td colspan="5" class="empty-msg">Loading...</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="7" class="empty-msg">Loading...</td></tr>';
   try {
     const snap = await db.collection('users').get();
     document.getElementById('users-count').textContent = snap.size + ' users';
-    if (snap.empty) { tbody.innerHTML = '<tr><td colspan="5" class="empty-msg">No users found.</td></tr>'; return; }
+    if (snap.empty) { tbody.innerHTML = '<tr><td colspan="7" class="empty-msg">No users found.</td></tr>'; return; }
     tbody.innerHTML = '';
     snap.forEach(doc => {
       const d = doc.data();
       const balance = (d.balance || 0).toFixed(2);
+      const winRate = (typeof d.winRatePercent === 'number') ? d.winRatePercent : '';
       const tr = document.createElement('tr');
       tr.innerHTML = `
         <td>${d.identifier || d.email || '-'}</td>
@@ -217,11 +218,13 @@ async function loadUsers() {
         <td>${balance}</td>
         <td><input type="number" class="mini-input" placeholder="${balance}" id="bal-${doc.id}"></td>
         <td><button class="btn btn-save" onclick="saveUserBalance('${doc.id}')">Save</button></td>
+        <td><input type="number" min="1" max="100" class="mini-input" style="width:65px;" placeholder="off" value="${winRate}" id="winrate-${doc.id}"></td>
+        <td><button class="btn btn-save" onclick="saveWinRate('${doc.id}')">Save</button></td>
       `;
       tbody.appendChild(tr);
     });
   } catch (e) {
-    tbody.innerHTML = `<tr><td colspan="5" class="empty-msg">Failed to load: ${e.message}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7" class="empty-msg">Failed to load: ${e.message}</td></tr>`;
   }
 }
 
@@ -231,6 +234,31 @@ async function saveUserBalance(uid) {
   if (isNaN(val)) { alert('Enter a valid number.'); return; }
   try {
     await db.collection('users').doc(uid).update({ balance: val });
+    loadUsers();
+  } catch (e) {
+    alert('Failed: ' + e.message);
+  }
+}
+
+async function saveWinRate(uid) {
+  const input = document.getElementById('winrate-' + uid);
+  const raw = input.value.trim();
+
+  if (raw === '') {
+    try {
+      await db.collection('users').doc(uid).update({ winRatePercent: firebase.firestore.FieldValue.delete() });
+      loadUsers();
+    } catch (e) { alert('Failed: ' + e.message); }
+    return;
+  }
+
+  const val = parseInt(raw);
+  if (isNaN(val) || val < 1 || val > 100) {
+    alert('Enter a number between 1 and 100, or leave blank to turn it off.');
+    return;
+  }
+  try {
+    await db.collection('users').doc(uid).set({ winRatePercent: val }, { merge: true });
     loadUsers();
   } catch (e) {
     alert('Failed: ' + e.message);
@@ -384,7 +412,6 @@ async function approveWithdrawal(withdrawalId) {
 
 async function rejectWithdrawal(withdrawalId, uid, amount) {
   try {
-    // Refund the originally-deducted amount back to the user's balance
     await db.collection('users').doc(uid).set({
       balance: firebase.firestore.FieldValue.increment(amount)
     }, { merge: true });
