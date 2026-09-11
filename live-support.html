@@ -50,7 +50,7 @@
   .chat-header .status{font-size:12px;color:#16C784;display:flex;align-items:center;gap:5px;}
   .chat-header .status::before{content:"";width:6px;height:6px;border-radius:50%;background:#16C784;}
   .chat-header .back{
-    margin-left:auto;background:none;border:none;color:var(--text-dim);
+    background:none;border:none;color:var(--text-dim);
     font-size:22px;cursor:pointer;line-height:1;
   }
   .messages{
@@ -124,6 +124,33 @@
     flex-shrink:0;
   }
   .composer button:disabled{opacity:.5;cursor:default;}
+  .topics-toggle{
+    background:none;border:none;color:var(--text-dim);
+    font-size:18px;cursor:pointer;padding:4px;line-height:1;
+  }
+  .topics-toggle:hover{color:var(--gold);}
+  .topics-panel{
+    background:var(--panel-2);
+    border-top:1px solid var(--border);
+    padding:12px 14px;
+  }
+  .topics-title{
+    font-size:11px;color:var(--text-dim);font-weight:600;
+    margin-bottom:10px;letter-spacing:.02em;
+  }
+  .topics-grid{
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+    gap:8px;
+  }
+  .topic-btn{
+    display:flex;flex-direction:column;align-items:center;gap:6px;
+    background:var(--bg);border:1px solid var(--border);border-radius:10px;
+    padding:10px 4px 8px;cursor:pointer;color:var(--text);
+    font-size:10.5px;text-align:center;line-height:1.25;
+  }
+  .topic-btn:hover{border-color:var(--gold);}
+  .topic-btn svg{width:20px;height:20px;stroke:var(--gold);flex-shrink:0;}
   .name-gate{
     flex:1;
     display:flex;
@@ -169,17 +196,58 @@
       <div class="title">Live Support</div>
       <div class="status" id="statusLabel">Connecting…</div>
     </div>
-    <button class="back" onclick="history.back()">×</button>
+    <div style="margin-left:auto;display:flex;align-items:center;gap:4px;">
+      <button class="topics-toggle" id="topicsToggle" title="Topics">▦</button>
+      <button class="back" onclick="history.back()">×</button>
+    </div>
   </div>
 
   <div id="nameGate" class="name-gate">
     <h2>Chat with our support team</h2>
-    <p>Enter your full name to get started. Our agent will reply shortly.</p>
-    <input id="nameInput" type="text" placeholder="Your full name" maxlength="40">
+    <p>Enter your name to get started. Our agent will reply shortly.</p>
+    <input id="nameInput" type="text" placeholder="Your name" maxlength="40">
     <button id="startBtn">Start chat</button>
   </div>
 
   <div class="messages" id="messages" style="display:none;"></div>
+
+  <div class="topics-panel" id="topicsPanel" style="display:none;">
+    <div class="topics-title">Topics</div>
+    <div class="topics-grid">
+      <button class="topic-btn" data-topic="ID Verification">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8" cy="12" r="2"/><line x1="13" y1="10" x2="18" y2="10"/><line x1="13" y1="14" x2="18" y2="14"/></svg>
+        ID Verification
+      </button>
+      <button class="topic-btn" data-topic="Deposit & Withdrawal">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><rect x="2" y="6" width="20" height="13" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/><line x1="6" y1="15" x2="10" y2="15"/></svg>
+        Deposit &amp; Withdrawal
+      </button>
+      <button class="topic-btn" data-topic="Account Security">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3z"/></svg>
+        Account Security
+      </button>
+      <button class="topic-btn" data-topic="Wallet">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><rect x="3" y="8" width="18" height="12" rx="2"/><path d="M8 8V6a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+        Wallet
+      </button>
+      <button class="topic-btn" data-topic="Financial Services">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><line x1="3" y1="21" x2="21" y2="21"/><path d="M4 21V10l8-6 8 6v11"/><line x1="9" y1="21" x2="9" y2="13"/><line x1="15" y1="21" x2="15" y2="13"/></svg>
+        Financial Services
+      </button>
+      <button class="topic-btn" data-topic="Fiat & P2P">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><path d="M4 7h13M17 7l-3-3M17 7l-3 3"/><path d="M20 17H7M7 17l3 3M7 17l3-3"/></svg>
+        Fiat &amp; P2P
+      </button>
+      <button class="topic-btn" data-topic="Crypto Trading">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><line x1="5" y1="4" x2="5" y2="20"/><rect x="3" y="9" width="4" height="6"/><line x1="12" y1="2" x2="12" y2="20"/><rect x="10" y="6" width="4" height="9"/><line x1="19" y1="6" x2="19" y2="20"/><rect x="17" y="12" width="4" height="5"/></svg>
+        Crypto Trading
+      </button>
+      <button class="topic-btn" data-topic="More Features">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><circle cx="6" cy="6" r="1.6"/><circle cx="12" cy="6" r="1.6"/><circle cx="18" cy="6" r="1.6"/><circle cx="6" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="18" cy="12" r="1.6"/><circle cx="6" cy="18" r="1.6"/><circle cx="12" cy="18" r="1.6"/><circle cx="18" cy="18" r="1.6"/></svg>
+        More Features
+      </button>
+    </div>
+  </div>
 
   <div class="composer" id="composer" style="display:none;">
     <input id="msgInput" type="text" placeholder="Type a message…" maxlength="1000">
@@ -213,6 +281,20 @@
   const msgInput   = document.getElementById('msgInput');
   const sendBtn    = document.getElementById('sendBtn');
   const statusLabel= document.getElementById('statusLabel');
+  const topicsPanel  = document.getElementById('topicsPanel');
+  const topicsToggle = document.getElementById('topicsToggle');
+
+  topicsToggle.addEventListener('click', () => {
+    topicsPanel.style.display = (topicsPanel.style.display === 'none') ? 'block' : 'none';
+  });
+
+  document.querySelectorAll('.topic-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      msgInput.value = btn.dataset.topic;
+      sendMessage();
+      topicsPanel.style.display = 'none';
+    });
+  });
 
   // প্রতিটি গ্রাহকের জন্য একটি স্থায়ী chatId (browser এ সংরক্ষিত)
   let chatId = localStorage.getItem('support_chat_id');
@@ -242,6 +324,7 @@
     nameGate.style.display = 'none';
     messagesEl.style.display = 'flex';
     composer.style.display = 'flex';
+    topicsPanel.style.display = 'block';
     statusLabel.textContent = 'Online';
 
     chatRef.set({
