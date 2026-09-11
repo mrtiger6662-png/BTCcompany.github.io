@@ -64,6 +64,27 @@
   background:rgba(240,185,11,0.15);
   box-shadow:0 0 0 6px rgba(240,185,11,0.08);
 }
+
+/* ===== Support menu (headset icon) ===== */
+.support-icon-btn {
+  width:34px; height:34px; border-radius:50%;
+  background:#1e2329; display:flex; align-items:center; justify-content:center;
+  font-size:16px; cursor:pointer; user-select:none;
+}
+.support-menu {
+  position:absolute; top:42px; right:0; background:#1e2329; border:1px solid #2b3139;
+  border-radius:12px; min-width:200px; display:none; flex-direction:column;
+  overflow:hidden; z-index:100; box-shadow:0 8px 20px rgba(0,0,0,0.45);
+}
+.support-menu.show { display:flex; }
+.support-menu button, .support-menu a {
+  display:flex; align-items:center; gap:10px; padding:13px 16px;
+  color:#eaecef; text-decoration:none; background:none; border:none;
+  font-size:14px; cursor:pointer; text-align:left; width:100%; font-family:inherit;
+}
+.support-menu button:hover, .support-menu a:hover { background:#2b3139; }
+.support-menu .menu-divider { height:1px; background:#2b3139; margin:0; }
+.support-menu .menu-ic { font-size:17px; width:20px; text-align:center; }
 </style>
 </head>
 <body>
@@ -72,7 +93,22 @@
   <h1>Market</h1>
   <div class="icons">
     <a href="deposit.html" class="deposit-btn">Deposit</a>
-    <span>&#128269;</span>
+    <div class="icon-wrap" id="support-wrap">
+      <div class="support-icon-btn" id="support-icon" aria-label="Support" role="button">&#127911;</div>
+      <div class="support-menu" id="support-menu">
+        <a href="support.html">
+          <span class="menu-ic">&#127911;</span> Live Support
+        </a>
+        <div class="menu-divider"></div>
+        <a href="https://wa.me/8801XXXXXXXXX" target="_blank" rel="noopener">
+          <span class="menu-ic">&#128241;</span> WhatsApp
+        </a>
+        <div class="menu-divider"></div>
+        <a href="https://t.me/yourtelegramusername" target="_blank" rel="noopener">
+          <span class="menu-ic">&#9992;&#65039;</span> Telegram
+        </a>
+      </div>
+    </div>
     <a href="notifications.html" class="icon-link icon-wrap" aria-label="Notifications">
       &#128276;
       <span class="notif-badge" id="notif-badge">0</span>
@@ -125,6 +161,16 @@ document.querySelectorAll('.tabs button').forEach(btn => {
     }
   });
 });
+
+// ===== Support menu toggle =====
+const supportIcon = document.getElementById('support-icon');
+const supportMenu = document.getElementById('support-menu');
+supportIcon.addEventListener('click', (e) => {
+  e.stopPropagation();
+  supportMenu.classList.toggle('show');
+});
+supportMenu.addEventListener('click', (e) => e.stopPropagation());
+document.addEventListener('click', () => supportMenu.classList.remove('show'));
 
 const popularCoins = [
   { symbol: 'BTCUSDT', name: 'Bitcoin', short: 'BTC', icon: 'btc' },
@@ -481,6 +527,7 @@ let pendingWithdrawals = 0;
 
 function updateNotifBadge() {
   const badge = document.getElementById('notif-badge');
+  if (!badge) return;
   const total = pendingDeposits + pendingWithdrawals;
   badge.textContent = total;
   badge.classList.toggle('show', total > 0);
