@@ -129,6 +129,7 @@
     font-size:12px;color:var(--text-dim);margin-top:3px;
     white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
   }
+  .chat-item .ci-last.typing{color:var(--gold);font-style:italic;}
   .unread-badge{
     background:var(--gold);color:#12151D;font-size:10px;font-weight:800;
     border-radius:999px;min-width:18px;height:18px;display:flex;align-items:center;justify-content:center;
@@ -148,6 +149,7 @@
   }
   .chat-panel-header .cph-name{font-weight:700;font-size:14.5px;}
   .chat-panel-header .cph-sub{font-size:11.5px;color:var(--text-dim);}
+  .chat-panel-header .cph-sub.typing{color:var(--gold);font-style:italic;}
   .resolve-btn{
     margin-left:auto;background:none;border:1px solid var(--border);color:var(--text-dim);
     border-radius:8px;padding:7px 12px;font-size:12px;cursor:pointer;
@@ -265,7 +267,7 @@
   };
 
   // ====== ২. এডমিন পাসওয়ার্ড এখানে পরিবর্তন করুন ======
-  const ADMIN_PASSWORD = "666267";
+  const ADMIN_PASSWORD = "changeme123";
   // =========================================================
 
   firebase.initializeApp(firebaseConfig);
@@ -335,6 +337,7 @@
         allChats = [];
         snap.forEach(doc => allChats.push({ id: doc.id, ...doc.data() }));
         renderChatList();
+        updateActiveHeaderTyping(); // নতুন: টাইপিং ইন্ডিকেটর আপডেট
       }, err => {
         chatList.innerHTML = '<div class="empty-list">লোড করতে সমস্যা হয়েছে।<br>Firestore rules চেক করুন।</div>';
         console.error(err);
@@ -368,6 +371,8 @@
       const item = document.createElement('div');
       item.className = 'chat-item' + (chat.id === activeChatId ? ' active' : '');
       const unread = chat.unreadByAdmin || 0;
+      const isTyping = !!chat.customerTyping;
+      const lastLine = isTyping ? 'Typing…' : (chat.lastMessage || '');
       item.innerHTML = `
         <div class="ci-avatar">${initials(chat.customerName)}</div>
         <div class="ci-body">
@@ -375,7 +380,7 @@
             <span>${escapeHtml(chat.customerName || 'Unknown')}</span>
             <span class="ci-time">${fmtTime(chat.lastMessageAt)}</span>
           </div>
-          <div class="ci-last">${escapeHtml(chat.lastMessage || '')}</div>
+          <div class="ci-last${isTyping ? ' typing' : ''}">${escapeHtml(lastLine)}</div>
         </div>
         ${unread > 0 ? `<div class="unread-badge">${unread}</div>` : ''}
       `;
@@ -392,6 +397,31 @@
     }[s]));
   }
 
+  // ---------- টাইপিং ইন্ডিকেটর (নতুন) ----------
+  function updateActiveHeaderTyping(){
+    if (!activeChatId) return;
+    const chat = allChats.find(c => c.id === activeChatId);
+    if (!chat) return;
+    if (chat.customerTyping){
+      cphSub.textContent = 'Typing…';
+      cphSub.classList.add('typing');
+    } else {
+      cphSub.textContent = 'Chat ID: ' + chat.id;
+      cphSub.classList.remove('typing');
+    }
+  }
+
+  let adminTypingTimeout = null;
+  msgInput.addEventListener('input', () => {
+    if (!activeChatId) return;
+    db.collection('supportChats').doc(activeChatId).set({ adminTyping: true }, { merge: true });
+    clearTimeout(adminTypingTimeout);
+    adminTypingTimeout = setTimeout(() => {
+      db.collection('supportChats').doc(activeChatId).set({ adminTyping: false }, { merge: true });
+    }, 1500);
+  });
+  // ================================================
+
   // ---------- Active chat ----------
   function openChat(chat){
     activeChatId = chat.id;
@@ -403,6 +433,7 @@
     sidebar.classList.add('slide-out'); // mobile: hide list, show chat
 
     renderChatList(); // to update active highlight
+    updateActiveHeaderTyping();
 
     // Reset unread counter for admin
     db.collection('supportChats').doc(chat.id).set({ unreadByAdmin: 0 }, { merge: true });
@@ -432,6 +463,7 @@
     const text = msgInput.value.trim();
     if (!text || !activeChatId) return;
     msgInput.value = '';
+    clearTimeout(adminTypingTimeout);
 
     const chatRef = db.collection('supportChats').doc(activeChatId);
     chatRef.collection('messages').add({
@@ -441,7 +473,8 @@
     });
     chatRef.set({
       lastMessage: text,
-      lastMessageAt: firebase.firestore.FieldValue.serverTimestamp()
+      lastMessageAt: firebase.firestore.FieldValue.serverTimestamp(),
+      adminTyping: false
     }, { merge: true });
   }
   sendBtn.addEventListener('click', sendReply);
