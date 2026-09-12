@@ -17,6 +17,9 @@
             padding: 16px 30px;
             background:#0b0e11;
             border-bottom: 1px solid #1e2329;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
         }
         header .logo { font-size: 28px; font-weight:bold; color:#f0b90b; }
         header .nav-right { display:flex; align-items:center; gap:12px; }
@@ -82,6 +85,40 @@
         .crypto-price{font-weight:bold; font-size:16px; color:#eaecef;}
         .crypto-change-up{color:#0ecb81; font-size:13px;}
         .crypto-change-down{color:#f6465d; font-size:13px;}
+        section.welcome-section {
+            padding: 60px 30px;
+            max-width: 1000px;
+            margin: auto;
+            background:#0b0e11;
+            text-align:center;
+        }
+        .welcome-graphic { position:relative; width:180px; height:180px; margin:0 auto 30px; }
+        .welcome-graphic .badge-heart {
+            position:absolute; top:10px; left:0;
+            background:#1e2329; border:2px solid #f0b90b; border-radius:8px;
+            padding:6px 10px; font-size:16px;
+        }
+        .welcome-graphic .badge-heart::after {
+            content:''; position:absolute; bottom:-8px; left:16px;
+            border-width:8px 6px 0 6px; border-style:solid;
+            border-color:#1e2329 transparent transparent transparent;
+        }
+        .welcome-graphic .badge-sparkle {
+            position:absolute; bottom:15px; right:0;
+            width:36px; height:36px; border-radius:50%;
+            background:#f0b90b; color:#202630;
+            display:flex; align-items:center; justify-content:center; font-size:18px;
+        }
+        .welcome-section h2 { color:#eaecef; font-size:30px; margin-bottom:16px; }
+        .welcome-section p.welcome-desc { color:#848e9c; max-width:600px; margin:0 auto 40px; line-height:1.6; }
+        .welcome-stats { display:flex; justify-content:center; gap:60px; flex-wrap:wrap; }
+        .welcome-stats .stat-col { text-align:left; }
+        .welcome-stats .stat-icon { color:#f0b90b; font-size:22px; margin-bottom:10px; }
+        .welcome-stats .stat-num { color:#eaecef; font-weight:bold; font-size:18px; }
+        .welcome-stats .stat-label { color:#848e9c; font-size:13px; margin-top:4px; }
+        @media (max-width:600px){
+          .welcome-stats { justify-content:flex-start; gap:24px; }
+        }
         section.page-section {
             padding: 50px 30px;
             max-width: 1000px;
@@ -90,6 +127,13 @@
         }
         section.page-section h2 { color:#eaecef; }
         section.page-section p, section.page-section h3 { color:#848e9c; }
+        .services-list { list-style:none; padding:0; margin:20px 0 0; }
+        .services-list li {
+            padding:16px 0; border-bottom:1px solid #1e2329;
+            color:#eaecef; font-size:16px; cursor:pointer;
+        }
+        .services-list li:last-child { border-bottom:none; }
+        .services-list li:hover { color:#f0b90b; }
         footer {
             background:#161a1e;
             color:#848e9c;
@@ -126,7 +170,7 @@
                 <ellipse cx="14" cy="61" rx="5" ry="8" fill="#f0b90b" transform="rotate(-65 14 61)"/>
             </svg>
             <div class="badge-item">
-                <div class="badge-title">5+ Years</div>
+                <div class="badge-title">10+ Years</div>
                 <div class="badge-sub">In Business</div>
             </div>
             <svg class="wreath wreath-right" viewBox="0 0 30 70" xmlns="http://www.w3.org/2000/svg">
@@ -178,21 +222,51 @@
     </div>
 </div>
 
-<section class="page-section" id="about">
-    <h2>About Us</h2>
-    <p>
-        Welcome to our company. We provide quality products
-        and reliable services to our customers.
-    </p>
+<section class="welcome-section" id="about">
+    <div class="welcome-graphic">
+        <svg viewBox="0 0 180 180" width="180" height="180">
+            <circle cx="90" cy="95" r="70" fill="none" stroke="#f0b90b" stroke-width="1.5" opacity="0.9"/>
+            <ellipse cx="90" cy="95" rx="70" ry="28" fill="none" stroke="#f0b90b" stroke-width="1" opacity="0.6"/>
+            <ellipse cx="90" cy="95" rx="70" ry="50" fill="none" stroke="#f0b90b" stroke-width="1" opacity="0.6"/>
+            <line x1="20" y1="95" x2="160" y2="95" stroke="#f0b90b" stroke-width="1" opacity="0.6"/>
+            <line x1="90" y1="25" x2="90" y2="165" stroke="#f0b90b" stroke-width="1" opacity="0.6"/>
+            <line x1="35" y1="55" x2="145" y2="135" stroke="#f0b90b" stroke-width="1" opacity="0.4"/>
+            <line x1="35" y1="135" x2="145" y2="55" stroke="#f0b90b" stroke-width="1" opacity="0.4"/>
+        </svg>
+        <div class="badge-heart">&#9825;</div>
+        <div class="badge-sparkle">&#10022;</div>
+    </div>
+    <h2>Welcome to Crypto World</h2>
+    <p class="welcome-desc">At Crypto World, we believe that everyone should have the freedom to earn, hold, spend, share and give their money - no matter who you are or where you come from.</p>
+    <div class="welcome-stats">
+        <div class="stat-col">
+            <div class="stat-icon">&#128179;</div>
+            <div class="stat-num">$65 bn</div>
+            <div class="stat-label">Average daily<br>volume</div>
+        </div>
+        <div class="stat-col">
+            <div class="stat-icon">&#10022;</div>
+            <div class="stat-num">300 bn</div>
+            <div class="stat-label">Spot transactions<br>in 2022</div>
+        </div>
+        <div class="stat-col">
+            <div class="stat-icon">&#128100;</div>
+            <div class="stat-num">24/7</div>
+            <div class="stat-label">Customer Support<br>in 40 languages</div>
+        </div>
+    </div>
 </section>
 <section class="page-section" id="services">
     <h2>Our Services</h2>
-    <h3>Service 1</h3>
-    <p>Description of your first service.</p>
-    <h3>Service 2</h3>
-    <p>Description of your second service.</p>
-    <h3>Service 3</h3>
-    <p>Description of your third service.</p>
+    <ul class="services-list">
+        <li>Affiliate</li>
+        <li>Referral</li>
+        <li>BTC</li>
+        <li>OTC &amp; Execution Services</li>
+        <li>Historical Market Data</li>
+        <li>Trading Insight</li>
+        <li>Proof of Reserves</li>
+    </ul>
 </section>
 <section class="page-section" id="contact">
     <h2>Contact Us</h2>
