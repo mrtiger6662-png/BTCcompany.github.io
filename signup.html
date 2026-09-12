@@ -135,13 +135,22 @@ async function signUp() {
     return;
   }
 
-  const email = identifier.includes('@') ? identifier : identifier.replace(/\D/g,'') + '@abccompany-users.com';
+  // Decide whether the user signed up with an email or a phone number,
+  // so the verification overlay text can match what they actually entered.
+  const isEmail = identifier.includes('@');
+  const email = isEmail ? identifier : identifier.replace(/\D/g,'') + '@abccompany-users.com';
+
+  const loadingTitle = isEmail ? 'Email Verification' : 'Mobile Number Verification';
+  const successTitle = isEmail ? 'Email Verified' : 'Mobile Number Verification Success';
+  const successSubtitle = isEmail
+    ? 'Your email address was successfully verified.'
+    : 'Your mobile number was successfully verified.';
 
   // Show the overlay immediately with the spinner, then run the real
   // account-creation work in parallel with a minimum 2s spinner time.
   overlay.classList.add('active');
   iconArea.innerHTML = '<div class="verify-spinner"></div>';
-  title.textContent = 'Email Verification';
+  title.textContent = loadingTitle;
   subtitle.textContent = '';
 
   const minSpinnerTime = new Promise(resolve => setTimeout(resolve, 2000));
@@ -170,8 +179,8 @@ async function signUp() {
         <circle class="verify-check-circle" cx="45" cy="45" r="42"></circle>
         <path class="verify-check-mark" d="M28 46l12 12 22-24"></path>
       </svg>`;
-    title.textContent = 'Email Verified';
-    subtitle.textContent = 'Your email address was successfully verified.';
+    title.textContent = successTitle;
+    subtitle.textContent = successSubtitle;
 
     setTimeout(() => {
       window.location.href = 'market.html';
