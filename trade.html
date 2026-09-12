@@ -601,7 +601,7 @@ function openChart(coin) {
 
   loadChart();
   clearInterval(refreshTimer);
-  refreshTimer = setInterval(loadChart, 15000);
+  refreshTimer = setInterval(loadChart, 3000);
 }
 
 backBtn.addEventListener('click', () => {
@@ -682,6 +682,20 @@ async function loadChart() {
     const res = await fetch(`https://api.binance.com/api/v3/klines?symbol=${currentSymbol.symbol}&interval=${interval}&limit=48`);
     const klines = await res.json();
     if (!klines || klines.length === 0) return;
+
+    // Merge the live price into the last (currently forming) candle so the
+    // chart visibly moves between full candle refreshes, not just every 15s.
+    try {
+      const priceRes = await fetch(`https://api.binance.com/api/v3/ticker/price?symbol=${currentSymbol.symbol}`);
+      const priceData = await priceRes.json();
+      const livePrice = parseFloat(priceData.price);
+      if (!isNaN(livePrice)) {
+        const last = klines[klines.length - 1];
+        last[4] = String(livePrice); // close
+        if (livePrice > parseFloat(last[2])) last[2] = String(livePrice); // high
+        if (livePrice < parseFloat(last[3])) last[3] = String(livePrice); // low
+      }
+    } catch (e) {}
 
     drawCandles(document.getElementById('candles'), klines);
     drawVolume(document.getElementById('volume'), klines);
