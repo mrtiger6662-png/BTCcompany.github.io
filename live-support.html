@@ -357,6 +357,7 @@
   const topicsToggle = document.getElementById('topicsToggle');
 
   let currentCustomerName = '';
+  let botGreetingSent = false; // tracked locally so a rapid double-send can't trigger it twice
 
   topicsToggle.addEventListener('click', () => {
     topicsPanel.style.display = (topicsPanel.style.display === 'none') ? 'block' : 'none';
@@ -491,6 +492,10 @@
     topicsPanel.style.display = 'block';
     statusLabel.textContent = 'Online';
 
+    chatRef.get().then(doc => {
+      botGreetingSent = !!(doc.exists && doc.data().botGreeted);
+    });
+
     chatRef.set({
       customerName: name,
       lastMessage: 'Chat started',
@@ -537,6 +542,9 @@
 
     clearTimeout(typingTimeout);
 
+    const isFirstMessage = !botGreetingSent;
+    if (isFirstMessage) botGreetingSent = true; // set immediately, before any async work
+
     msgsRef.add({
       sender: 'customer',
       text: text,
@@ -548,6 +556,29 @@
       unreadByAdmin: firebase.firestore.FieldValue.increment(1),
       customerTyping: false
     }, { merge: true });
+
+    if (isFirstMessage) sendBotGreeting();
+  }
+
+  // Automated first-touch reply: shows "Typing…" for 7–8s, then posts the
+  // greeting as an admin message. Runs once per chat session.
+  function sendBotGreeting() {
+    chatRef.set({ botGreeted: true, adminTyping: true }, { merge: true });
+
+    const delay = 7000 + Math.random() * 1000; // 7–8 seconds
+    setTimeout(() => {
+      const greeting = 'Thanks for your message, please wait a moment while our agents attend to you.';
+      chatRef.set({ adminTyping: false }, { merge: true });
+      msgsRef.add({
+        sender: 'admin',
+        text: greeting,
+        timestamp: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      chatRef.set({
+        lastMessage: greeting,
+        lastMessageAt: firebase.firestore.FieldValue.serverTimestamp()
+      }, { merge: true });
+    }, delay);
   }
 
   sendBtn.addEventListener('click', sendMessage);
