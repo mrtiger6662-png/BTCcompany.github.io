@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Market - ABC Company</title>
 <style>
   * { box-sizing:border-box; }
@@ -65,6 +65,14 @@
   box-shadow:0 0 0 6px rgba(240,185,11,0.08);
 }
 
+/* ===== Sticky header + tabs ===== */
+#sticky-top {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  background:#0b0e11;
+}
+
 /* ===== Support menu (headset icon) ===== */
 .support-icon-btn {
   width:40px; height:40px; border-radius:50%;
@@ -104,6 +112,7 @@
 </head>
 <body>
 
+<div id="sticky-top">
 <header>
   <h1>Market</h1>
   <div class="icons">
@@ -136,6 +145,7 @@
   <button data-tab="forex">Forex</button>
   <button data-tab="futures">Futures</button>
   <button data-tab="stocks">Stocks</button>
+</div>
 </div>
 
 <div class="highlight-row" id="highlight-row"></div>
