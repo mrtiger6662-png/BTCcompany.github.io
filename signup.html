@@ -101,6 +101,14 @@ const firebaseConfig = {
 };
 firebase.initializeApp(firebaseConfig);
 
+// Full Name types in as all uppercase; Email/Phone types in as all lowercase.
+document.getElementById('fullname').addEventListener('input', function () {
+  this.value = this.value.toUpperCase();
+});
+document.getElementById('phone').addEventListener('input', function () {
+  this.value = this.value.toLowerCase();
+});
+
 async function getNextAccountId() {
   const counterRef = firebase.firestore().collection('counters').doc('users');
   const nextNumber = await firebase.firestore().runTransaction(async (t) => {
