@@ -213,8 +213,9 @@
 <div class="auth-gate" id="authGate">
   <div class="logo">🔒</div>
   <h2>Admin Login</h2>
-  <p>এডমিন প্যানেলে ঢুকতে পাসওয়ার্ড দিন</p>
-  <input id="adminPassInput" type="password" placeholder="Admin password" autocomplete="off">
+  <p>এডমিন প্যানেলে ঢুকতে আপনার এডমিন ইমেইল ও পাসওয়ার্ড দিন</p>
+  <input id="adminEmailInput" type="email" placeholder="Admin email" autocomplete="off">
+  <input id="adminPassInput" type="password" placeholder="Password" autocomplete="off">
   <button id="adminLoginBtn">Login</button>
   <div class="auth-error" id="authError"></div>
 </div>
@@ -267,6 +268,7 @@
 
 <!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
 <script>
   // ====== ১. এখানে সেই একই Firebase কনফিগ (live-support.html এর মতো) ======
@@ -279,8 +281,8 @@
     appId: "1:1026212780106:web:985ec1bc35837d6320eeb3"
   };
 
-  // ====== ২. এডমিন পাসওয়ার্ড এখানে পরিবর্তন করুন ======
-  const ADMIN_PASSWORD = "666267";
+  // ====== ২. এই ইমেইলের অ্যাকাউন্টই একমাত্র admin-support.html-এ ঢুকতে পারবে ======
+  const ADMIN_EMAIL = "mrtiger6662@gmail.com";
   // =========================================================
 
   firebase.initializeApp(firebaseConfig);
@@ -302,6 +304,7 @@
 
   // ---------- Elements ----------
   const authGate       = document.getElementById('authGate');
+  const adminEmailInput= document.getElementById('adminEmailInput');
   const adminPassInput = document.getElementById('adminPassInput');
   const adminLoginBtn  = document.getElementById('adminLoginBtn');
   const authError      = document.getElementById('authError');
@@ -326,31 +329,48 @@
   let activeChatId = null;
   let unsubscribeMessages = null;
 
-  // ---------- Auth (client-side gate) ----------
+  // ---------- Auth (real Firebase login, restricted to ADMIN_EMAIL) ----------
   function tryLogin(){
-    const val = adminPassInput.value;
-    if (val === ADMIN_PASSWORD){
-      sessionStorage.setItem('admin_authed', '1');
-      authGate.style.display = 'none';
-      appShell.classList.remove('hidden');
-      initInbox();
-    } else {
-      authError.textContent = 'পাসওয়ার্ড সঠিক নয়।';
+    const email = adminEmailInput.value.trim();
+    const pass = adminPassInput.value;
+    authError.textContent = '';
+
+    if (!email || !pass){
+      authError.textContent = 'ইমেইল ও পাসওয়ার্ড দিন।';
+      return;
     }
+
+    firebase.auth().signInWithEmailAndPassword(email, pass)
+      .then(cred => {
+        if ((cred.user.email || '').toLowerCase() !== ADMIN_EMAIL.toLowerCase()){
+          authError.textContent = 'এই অ্যাকাউন্টের admin-support.html দেখার অনুমতি নেই।';
+          firebase.auth().signOut();
+          return;
+        }
+        authGate.style.display = 'none';
+        appShell.classList.remove('hidden');
+        initInbox();
+      })
+      .catch(err => {
+        authError.textContent = 'লগইন ব্যর্থ: ' + err.message;
+      });
   }
   adminLoginBtn.addEventListener('click', tryLogin);
   adminPassInput.addEventListener('keydown', e => { if (e.key === 'Enter') tryLogin(); });
+  adminEmailInput.addEventListener('keydown', e => { if (e.key === 'Enter') tryLogin(); });
 
   logoutBtn.addEventListener('click', () => {
-    sessionStorage.removeItem('admin_authed');
-    location.reload();
+    firebase.auth().signOut().then(() => location.reload());
   });
 
-  if (sessionStorage.getItem('admin_authed') === '1'){
-    authGate.style.display = 'none';
-    appShell.classList.remove('hidden');
-    initInbox();
-  }
+  // If already signed in as the admin (e.g. page refresh), skip straight to the inbox.
+  firebase.auth().onAuthStateChanged(user => {
+    if (user && (user.email || '').toLowerCase() === ADMIN_EMAIL.toLowerCase()){
+      authGate.style.display = 'none';
+      appShell.classList.remove('hidden');
+      initInbox();
+    }
+  });
 
   // ---------- Inbox ----------
   let inboxInitialized = false;
