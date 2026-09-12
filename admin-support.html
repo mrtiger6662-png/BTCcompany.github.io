@@ -369,6 +369,40 @@
         chatList.innerHTML = '<div class="empty-list">লোড করতে সমস্যা হয়েছে।<br>Firestore rules চেক করুন।</div>';
         console.error(err);
       });
+
+    // ====== ১৫ মিনিট নিষ্ক্রিয় চ্যাট স্বয়ংক্রিয়ভাবে মুছে ফেলা ======
+    setInterval(cleanupExpiredChats, 30000); // প্রতি ৩০ সেকেন্ডে চেক করবে
+    // =====================================================================
+  }
+
+  // Deletes a chat's entire messages subcollection, then the chat doc itself.
+  async function deleteChatCompletely(chatId){
+    const chatRef = db.collection('supportChats').doc(chatId);
+    const msgsSnap = await chatRef.collection('messages').get();
+    const batch = db.batch();
+    msgsSnap.forEach(doc => batch.delete(doc.ref));
+    batch.delete(chatRef);
+    await batch.commit();
+  }
+
+  const CHAT_EXPIRY_MS = 15 * 60 * 1000; // 15 minutes since the last message
+
+  function cleanupExpiredChats(){
+    const now = Date.now();
+    allChats.forEach(chat => {
+      if (!chat.lastMessageAt || !chat.lastMessageAt.toDate) return;
+      const lastMs = chat.lastMessageAt.toDate().getTime();
+      if (now - lastMs > CHAT_EXPIRY_MS){
+        deleteChatCompletely(chat.id).then(() => {
+          if (activeChatId === chat.id){
+            activeChatId = null;
+            if (unsubscribeMessages){ unsubscribeMessages(); unsubscribeMessages = null; }
+            activeChatView.style.display = 'none';
+            noChatSelected.style.display = 'flex';
+          }
+        }).catch(err => console.error('Failed to delete expired chat', chat.id, err));
+      }
+    });
   }
 
   function initials(name){
