@@ -177,6 +177,48 @@
   .welcome-loading {
     display:flex; align-items:center; justify-content:center;
     height:60vh; text-align:center; padding:20px;
+    position:relative; overflow:hidden;
+  }
+  .candle-bg {
+    position:absolute; inset:0;
+    display:flex; align-items:center; justify-content:center;
+    gap:14px;
+    z-index:0; opacity:0.55; pointer-events:none;
+  }
+  .candle-bar {
+    width:22px;
+    border:2px solid #fff;
+    border-radius:3px;
+    position:relative;
+    animation: candlePulse 1.8s ease-in-out infinite;
+  }
+  .candle-bar::before {
+    content:'';
+    position:absolute; left:50%; top:-16px; bottom:-16px;
+    width:2px; background:#fff;
+    transform:translateX(-50%);
+    z-index:-1;
+  }
+  .candle-bar.up { background:#0ecb81; }
+  .candle-bar.down { background:#f6465d; }
+  .candle-bar:nth-child(1) { animation-delay:0s; }
+  .candle-bar:nth-child(2) { animation-delay:0.25s; }
+  .candle-bar:nth-child(3) { animation-delay:0.5s; }
+  .candle-bar:nth-child(4) { animation-delay:0.75s; }
+  .candle-bar:nth-child(5) { animation-delay:1s; }
+  .candle-bar:nth-child(6) { animation-delay:1.25s; }
+  .candle-bar:nth-child(7) { animation-delay:1.5s; }
+  .candle-bar:nth-child(8) { animation-delay:1.75s; }
+  .candle-bar:nth-child(9) { animation-delay:2s; }
+  .candle-bar:nth-child(10) { animation-delay:2.25s; }
+  @keyframes candlePulse {
+    0%, 100% { height:60px; }
+    50% { height:150px; }
+  }
+  .welcome-loading .typing-text,
+  .welcome-loading .typing-cursor {
+    position:relative;
+    z-index:1;
   }
   .typing-text {
   font-size:28px; font-weight:900; color:#f0b90b;
@@ -202,7 +244,21 @@
   <h1 id="page-title">Smart Trading</h1>
 </header>
 
-<div id="coin-list-view"><div class="welcome-loading"><span class="typing-text" id="welcome-text"></span><span class="typing-cursor">&nbsp;</span></div></div>
+<div id="coin-list-view"><div class="welcome-loading">
+  <div class="candle-bg">
+    <div class="candle-bar up"></div>
+    <div class="candle-bar down"></div>
+    <div class="candle-bar up"></div>
+    <div class="candle-bar down"></div>
+    <div class="candle-bar up"></div>
+    <div class="candle-bar down"></div>
+    <div class="candle-bar up"></div>
+    <div class="candle-bar down"></div>
+    <div class="candle-bar up"></div>
+    <div class="candle-bar down"></div>
+  </div>
+  <span class="typing-text" id="welcome-text"></span><span class="typing-cursor">&nbsp;</span>
+</div></div>
 <script>
 (function() {
   var text = "Welcome Smart Trading";
@@ -513,7 +569,21 @@ function iconUrl(icon) {
 }
 
 async function loadCoinList() {
-  listView.innerHTML = '<div class="welcome-loading"><span class="typing-text">Welcome Smart Trading</span></div>';
+  listView.innerHTML = `<div class="welcome-loading">
+    <div class="candle-bg">
+      <div class="candle-bar up"></div>
+      <div class="candle-bar down"></div>
+      <div class="candle-bar up"></div>
+      <div class="candle-bar down"></div>
+      <div class="candle-bar up"></div>
+      <div class="candle-bar down"></div>
+      <div class="candle-bar up"></div>
+      <div class="candle-bar down"></div>
+      <div class="candle-bar up"></div>
+      <div class="candle-bar down"></div>
+    </div>
+    <span class="typing-text">Welcome Smart Trading</span>
+  </div>`;
   try {
         const minDelay = new Promise(resolve => setTimeout(resolve, 2000));
     const symbolsParam = encodeURIComponent(JSON.stringify(coinList.map(c => c.symbol)));
