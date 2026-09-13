@@ -65,6 +65,48 @@
             width:44px; height:44px; border-radius:8px; border:1px solid #474d57;
             display:flex; align-items:center; justify-content:center; font-size:18px;
         }
+
+        /* ===== Achievement ticker (scrolls right -> left, Binance-style) ===== */
+        .ticker-wrap {
+            max-width: 900px;
+            margin: 0 0 10px;
+            padding: 14px 0;
+            background: #161a1e;
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative;
+        }
+        .ticker-track {
+            display: flex;
+            width: max-content;
+            gap: 40px;
+            animation: tickerScroll 28s linear infinite;
+        }
+        .ticker-wrap:hover .ticker-track {
+            animation-play-state: paused;
+        }
+        .ticker-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            white-space: nowrap;
+            color: #eaecef;
+            font-size: 14px;
+            padding: 0 20px;
+            border-right: 1px solid #2b3139;
+        }
+        .ticker-item .ticker-icon {
+            width: 28px; height: 28px; border-radius: 6px;
+            background: #f0b90b; color: #202630;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: bold; font-size: 14px; flex-shrink: 0;
+        }
+        .ticker-item b { color: #f0b90b; }
+        @keyframes tickerScroll {
+            from { transform: translateX(0); }
+            to { transform: translateX(-50%); }
+        }
+
         .crypto-panel {
             background:#161a1e; border-radius:12px; margin: 20px 30px 50px;
             padding: 20px;
@@ -220,6 +262,17 @@
         <input type="text" placeholder="Email/Phone number">
         <button onclick="window.location.href='signup.html'">Sign Up</button>
     </div>
+
+    <!-- ===== Scrolling achievement ticker (right -> left, loops forever) ===== -->
+    <div class="ticker-wrap">
+        <div class="ticker-track" id="ticker-track">
+            <div class="ticker-item"><span class="ticker-icon">&#9733;</span>Recognized as <b>Forbes' Most Trusted Crypto Exchange 2025</b></div>
+            <div class="ticker-item"><span class="ticker-icon">&#9733;</span>Named <b>CNBC's World's Top Fintech Company 2025</b> in Digital Assets</div>
+            <div class="ticker-item"><span class="ticker-icon">&#9733;</span>Named a <b>CeFi Leader</b> in Fortune Crypto 100's Most Influential Companies in Blockchain</div>
+            <div class="ticker-item"><span class="ticker-icon">&#9733;</span><b>Funds are SAFU</b> — protecting your assets is our top priority</div>
+        </div>
+    </div>
+
 </div>
 
 <div class="crypto-panel">
@@ -305,6 +358,13 @@ setInterval(() => {
   customerCount += 1;
   customerCountEl.textContent = customerCount.toLocaleString('en-US');
 }, 3000);
+
+// Duplicate the ticker items once so the right-to-left loop is seamless
+// (the track scrolls exactly 50% of its total width, which is one full set).
+(function duplicateTicker() {
+  const track = document.getElementById('ticker-track');
+  track.innerHTML += track.innerHTML;
+})();
 
 const coinList = [
   { symbol: 'BTCUSDT', name: 'Bitcoin', short: 'BTC', icon: 'btc' },
