@@ -37,7 +37,7 @@
   .amount-label { font-size:13px; color:#848e9c; margin-bottom:5px; }
   .amount-input {
     width:100%; background:#161a1e; border:1px solid #2b3139; color:#eaecef;
-    padding:11px; border-radius:8px; font-size:14px; font-weight:bold; margin-bottom:6px;
+    padding:11px; border-radius:8px; font-size:16px; font-weight:bold; margin-bottom:6px;
   }
   .amount-input::placeholder { color:#5b6169; font-weight:normal; }
   .amount-error { text-align:center; font-size:12px; color:#f6465d; margin-bottom:6px; min-height:14px; }
@@ -46,17 +46,49 @@
     padding:12px; border-radius:8px; font-weight:bold; font-size:14px; cursor:pointer;
   }
   .upload-btn:disabled { opacity:0.5; cursor:not-allowed; }
-  .proof-status {
+
+  /* ====== Upload progress (নতুন) ====== */
+  .upload-progress{
     display:none;
-    position:absolute;
-    top:0; left:0; right:0; bottom:0;
-    align-items:center; justify-content:center;
-    text-align:center; font-size:14px; font-weight:bold;
-    padding:8px 12px; border-radius:8px;
-    background:rgba(11,14,17,0.9);
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:12px;
+    padding:18px 12px 6px;
   }
-  .proof-status.show { display:flex; color:#0ecb81; }
-  .proof-status.show.error { color:#f6465d; }
+  .upload-progress.show{ display:flex; }
+  .spinner-circle{
+    width:56px; height:56px; border-radius:50%;
+    border:4px solid #2b3139;
+    border-top-color:#f0b90b;
+    animation:spin 0.75s linear infinite;
+    display:flex; align-items:center; justify-content:center;
+    transition:border-color 0.2s;
+  }
+  .spinner-circle.complete{
+    animation:none;
+    border-color:#0ecb81;
+  }
+  .spinner-circle.error{
+    animation:none;
+    border-color:#f6465d;
+  }
+  .spinner-circle .checkmark{
+    display:none;
+    color:#0ecb81;
+    font-size:26px;
+    font-weight:bold;
+    line-height:1;
+  }
+  .spinner-circle.complete .checkmark{ display:block; }
+  @keyframes spin{ to{ transform:rotate(360deg); } }
+  .progress-text{
+    font-size:14px; font-weight:bold; color:#eaecef; text-align:center;
+  }
+  .progress-text.complete{ color:#0ecb81; }
+  .progress-text.error{ color:#f6465d; font-weight:normal; font-size:13px; }
+  /* ===================================== */
+
   .bottom-nav {
     position:fixed; bottom:0; left:0; right:0; background:#161a1e;
     display:flex; justify-content:space-around; padding:10px 0;
@@ -91,7 +123,6 @@
 
   <div class="qr-wrap">
     <img id="qr-img" src="" alt="QR code">
-    <div class="proof-status" id="proof-status"></div>
   </div>
 
   <div class="warning-box">
@@ -104,6 +135,15 @@
 
   <input type="file" id="proof-input" accept="image/*" style="display:none;">
   <button class="upload-btn" id="upload-btn">Upload Proof</button>
+
+  <!-- ====== Upload progress UI (নতুন) ====== -->
+  <div class="upload-progress" id="upload-progress">
+    <div class="spinner-circle" id="spinner-circle">
+      <span class="checkmark" id="checkmark">&#10003;</span>
+    </div>
+    <div class="progress-text" id="progress-text">Uploading...</div>
+  </div>
+  <!-- ======================================= -->
 </div>
 
 <div class="bottom-nav">
@@ -178,8 +218,7 @@ function selectAsset(a) {
   document.getElementById('amount-input').placeholder = `Enter deposit amount (${a.symbol})`;
   document.getElementById('amount-input').value = '';
   document.getElementById('amount-error').textContent = '';
-  const statusEl = document.getElementById('proof-status');
-  statusEl.classList.remove('show', 'error');
+  resetProgress();
 }
 
 document.getElementById('copy-btn').addEventListener('click', function () {
@@ -202,6 +241,22 @@ document.getElementById('upload-btn').addEventListener('click', () => {
   document.getElementById('proof-input').click();
 });
 
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function resetProgress() {
+  const progressWrap = document.getElementById('upload-progress');
+  const spinner = document.getElementById('spinner-circle');
+  const text = document.getElementById('progress-text');
+  progressWrap.classList.remove('show');
+  spinner.classList.remove('complete', 'error');
+  text.classList.remove('complete', 'error');
+  text.textContent = 'Uploading...';
+  document.getElementById('upload-btn').style.display = '';
+  document.getElementById('upload-btn').disabled = false;
+}
+
 document.getElementById('proof-input').addEventListener('change', async function () {
   if (!this.files || this.files.length === 0) return;
   if (!currentUser) return;
@@ -209,12 +264,20 @@ document.getElementById('proof-input').addEventListener('change', async function
   const file = this.files[0];
   const amountVal = parseFloat(document.getElementById('amount-input').value);
   const uploadBtn = document.getElementById('upload-btn');
-  const statusEl = document.getElementById('proof-status');
+  const progressWrap = document.getElementById('upload-progress');
+  const spinner = document.getElementById('spinner-circle');
+  const text = document.getElementById('progress-text');
 
+  // ====== ধাপ ১: Uploading... স্পিনার দেখানো (কমপক্ষে ২ সেকেন্ড) ======
+  uploadBtn.style.display = 'none';
   uploadBtn.disabled = true;
-  statusEl.className = 'proof-status show';
-statusEl.textContent = `Proof submitted for ${amountVal} ${currentAsset.symbol}. We will verify shortly.`;
-document.getElementById('amount-input').value = '';   
+  spinner.classList.remove('complete', 'error');
+  text.classList.remove('complete', 'error');
+  text.textContent = 'Uploading...';
+  progressWrap.classList.add('show');
+
+  const startTime = Date.now();
+  const MIN_UPLOADING_MS = 2000;
 
   try {
     const formData = new FormData();
@@ -239,13 +302,30 @@ document.getElementById('amount-input').value = '';
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
     });
 
-    statusEl.className = 'proof-status show';
-    statusEl.textContent = `Proof submitted for ${amountVal} ${currentAsset.symbol}. We will verify shortly.`;
+    // আসল আপলোড দ্রুত শেষ হলেও কমপক্ষে ২ সেকেন্ড স্পিনার দেখানো নিশ্চিত করা
+    const elapsed = Date.now() - startTime;
+    if (elapsed < MIN_UPLOADING_MS) {
+      await sleep(MIN_UPLOADING_MS - elapsed);
+    }
+
+    // ====== ধাপ ২: Upload Complete (টিক মার্ক, ১ সেকেন্ড) ======
+    spinner.classList.add('complete');
+    text.classList.add('complete');
+    text.textContent = 'Upload Complete';
+    document.getElementById('amount-input').value = '';
+
+    await sleep(1000);
+
+    // ====== ধাপ ৩: Market এ রিডাইরেক্ট ======
+    window.location.href = 'market.html';
+
   } catch (err) {
-    statusEl.className = 'proof-status show error';
-    statusEl.textContent = 'Something went wrong: ' + err.message;
-  } finally {
+    spinner.classList.add('error');
+    text.classList.add('error');
+    text.textContent = 'Something went wrong: ' + err.message;
+    uploadBtn.style.display = '';
     uploadBtn.disabled = false;
+  } finally {
     this.value = '';
   }
 });
