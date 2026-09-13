@@ -32,7 +32,7 @@
             padding:8px 16px; border-radius:6px; font-weight:bold; cursor:pointer;
         }
         .hero {
-            padding: 60px 30px 40px;
+            padding: 20px 30px 10px;
             max-width: 900px;
         }
         .hero .stat {
@@ -82,6 +82,9 @@
             gap: 40px;
             animation: tickerScroll 28s linear infinite;
         }
+        .ticker-track-slow {
+            animation-duration: 40s;
+        }
         .ticker-wrap:hover .ticker-track {
             animation-play-state: paused;
         }
@@ -99,8 +102,9 @@
             width: 28px; height: 28px; border-radius: 6px;
             background: #f0b90b; color: #202630;
             display: flex; align-items: center; justify-content: center;
-            font-weight: bold; font-size: 14px; flex-shrink: 0;
+            font-weight: bold; font-size: 11px; flex-shrink: 0;
         }
+        .ticker-item .ticker-icon.round { border-radius: 50%; color:#fff; }
         .ticker-item b { color: #f0b90b; }
         @keyframes tickerScroll {
             from { transform: translateX(0); }
@@ -108,7 +112,7 @@
         }
 
         .crypto-panel {
-            background:#161a1e; border-radius:12px; margin: 20px 30px 50px;
+            background:#161a1e; border-radius:12px; margin: 5px 30px 50px;
             padding: 20px;
         }
         .crypto-tabs { display:flex; gap:24px; border-bottom:1px solid #2b3139; padding-bottom:12px; margin-bottom:12px;}
@@ -193,6 +197,10 @@
         }
         @media (max-width:600px){
           .hero .stat{font-size:32px;} .hero h1{font-size:26px;}
+          .badges { flex-wrap:nowrap; gap:10px; }
+          .wreath { width:16px; height:40px; }
+          .badge-title { font-size:15px; }
+          .badge-sub { font-size:10px; }
         }
     </style>
 </head>
@@ -270,6 +278,43 @@
             <div class="ticker-item"><span class="ticker-icon">&#9733;</span>Named <b>CNBC's World's Top Fintech Company 2025</b> in Digital Assets</div>
             <div class="ticker-item"><span class="ticker-icon">&#9733;</span>Named a <b>CeFi Leader</b> in Fortune Crypto 100's Most Influential Companies in Blockchain</div>
             <div class="ticker-item"><span class="ticker-icon">&#9733;</span><b>Funds are SAFU</b> — protecting your assets is our top priority</div>
+        </div>
+    </div>
+
+    <!-- ===== Scrolling logos ticker: popular stocks + exchanges (right -> left) ===== -->
+    <div class="ticker-wrap">
+        <div class="ticker-track ticker-track-slow" id="ticker-track-2">
+            <div class="ticker-item"><span class="ticker-icon round" style="background:#555;">AAPL</span>Apple</div>
+            <div class="ticker-item"><span class="ticker-icon round" style="background:#4285f4;">GOOG</span>Google</div>
+            <div class="ticker-item"><span class="ticker-icon round" style="background:#00a4ef;">MSFT</span>Microsoft</div>
+            <div class="ticker-item"><span class="ticker-icon round" style="background:#ff9900;">AMZN</span>Amazon</div>
+            <div class="ticker-item"><span class="ticker-icon round" style="background:#e50914;">TSLA</span>Tesla</div>
+            <div class="ticker-item"><span class="ticker-icon round" style="background:#76b900;">NVDA</span>NVIDIA</div>
+            <div class="ticker-item"><span class="ticker-icon round" style="background:#1877f2;">META</span>Meta</div>
+            <div class="ticker-item"><span class="ticker-icon round" style="background:#e50914;">NFLX</span>Netflix</div>
+            <div class="ticker-item"><span class="ticker-icon round" style="background:#1a1f71;">V</span>Visa</div>
+            <div class="ticker-item"><span class="ticker-icon round" style="background:#eb001b;">MA</span>Mastercard</div>
+
+            <div class="ticker-item"><span class="ticker-icon round" style="background:#f0b90b;color:#202630;">BN</span>Binance</div>
+            <div class="ticker-item"><span class="ticker-icon round" style="background:#1652f0;">CB</span>Coinbase</div>
+            <div class="ticker-item"><span class="ticker-icon round" style="background:#5741d9;">KR</span>Kraken</div>
+            <div class="ticker-item"><span class="ticker-icon round" style="background:#fcd535;color:#202630;">BY</span>Bybit</div>
+            <div class="ticker-item"><span class="ticker-icon round" style="background:#000;">OK</span>OKX</div>
+            <div class="ticker-item"><span class="ticker-icon round" style="background:#24ae8f;">KU</span>KuCoin</div>
+            <div class="ticker-item"><span class="ticker-icon round" style="background:#2e7dd7;">HT</span>HTX</div>
+            <div class="ticker-item"><span class="ticker-icon round" style="background:#e6390b;">GT</span>Gate.io</div>
+            <div class="ticker-item"><span class="ticker-icon round" style="background:#8fc93a;color:#202630;">BF</span>Bitfinex</div>
+            <div class="ticker-item"><span class="ticker-icon round" style="background:#00b4e6;">BS</span>Bitstamp</div>
+            <div class="ticker-item"><span class="ticker-icon round" style="background:#00dcfa;color:#202630;">GM</span>Gemini</div>
+            <div class="ticker-item"><span class="ticker-icon round" style="background:#03a9f4;">CC</span>Crypto.com</div>
+            <div class="ticker-item"><span class="ticker-icon round" style="background:#0064ff;">MX</span>MEXC</div>
+            <div class="ticker-item"><span class="ticker-icon round" style="background:#00f0ff;color:#202630;">BG</span>Bitget</div>
+            <div class="ticker-item"><span class="ticker-icon round" style="background:#00b090;">PL</span>Poloniex</div>
+            <div class="ticker-item"><span class="ticker-icon round" style="background:#e2141a;">BM</span>BitMEX</div>
+            <div class="ticker-item"><span class="ticker-icon round" style="background:#0f9dd7;">DB</span>Deribit</div>
+            <div class="ticker-item"><span class="ticker-icon round" style="background:#0f3494;">UB</span>Upbit</div>
+            <div class="ticker-item"><span class="ticker-icon round" style="background:#f7931a;color:#202630;">BH</span>Bithumb</div>
+            <div class="ticker-item"><span class="ticker-icon round" style="background:#2f56d2;">WX</span>WazirX</div>
         </div>
     </div>
 
@@ -363,6 +408,10 @@ setInterval(() => {
 // (the track scrolls exactly 50% of its total width, which is one full set).
 (function duplicateTicker() {
   const track = document.getElementById('ticker-track');
+  track.innerHTML += track.innerHTML;
+})();
+(function duplicateTicker2() {
+  const track = document.getElementById('ticker-track-2');
   track.innerHTML += track.innerHTML;
 })();
 
