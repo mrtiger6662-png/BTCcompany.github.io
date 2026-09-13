@@ -79,12 +79,17 @@
   box-shadow:0 0 0 6px rgba(240,185,11,0.08);
 }
 
-/* ===== Sticky header + tabs ===== */
+/* ===== Fixed header + tabs (স্ক্রল করলেও স্থির থাকবে) ===== */
 #sticky-top {
-  position: sticky;
+  position: fixed;
   top: 0;
+  left: 0;
+  right: 0;
   z-index: 1000;
   background:#0b0e11;
+}
+#page-content{
+  /* এই padding-top JS দিয়ে সেট হয়, হেডারের আসল উচ্চতা অনুযায়ী */
 }
 
 /* ===== Support menu (headset icon) ===== */
@@ -162,6 +167,7 @@
 </div>
 </div>
 
+<div id="page-content">
 <div class="highlight-row" id="highlight-row"></div>
 
 <table>
@@ -172,6 +178,7 @@
     <tr><td colspan="3" style="text-align:center; color:#848e9c;">Loading...</td></tr>
   </tbody>
 </table>
+</div>
 
 <div class="bottom-nav">
   <a href="market.html"><div class="active"><div class="ic">&#128200;</div>Market</div></a>
@@ -185,6 +192,19 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script>
 let currentTab = 'crypto';
+
+// ====== ফিক্সড হেডারের উচ্চতা মেপে নিচের কনটেন্টে জায়গা দেওয়া (নতুন) ======
+function adjustHeaderOffset(){
+  const stickyTop = document.getElementById('sticky-top');
+  const pageContent = document.getElementById('page-content');
+  if (stickyTop && pageContent){
+    pageContent.style.paddingTop = stickyTop.offsetHeight + 'px';
+  }
+}
+window.addEventListener('load', adjustHeaderOffset);
+window.addEventListener('resize', adjustHeaderOffset);
+adjustHeaderOffset();
+// ============================================================================
 
 document.querySelectorAll('.tabs button').forEach(btn => {
   btn.addEventListener('click', () => {
